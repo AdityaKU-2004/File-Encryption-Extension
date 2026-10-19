@@ -1,0 +1,83 @@
+@import "tailwindcss";
+
+@layer base {
+  :root {
+    font-family: 'Plus Jakarta Sans', system-ui, -apple-system, sans-serif;
+  }
+
+  code, pre, .font-mono {
+    font-family: 'JetBrains Mono', monospace;
+    font-variant-numeric: tabular-nums;
+  }
+}
+
+/* Custom glassmorphism and theme styles */
+.dark {
+  --bg-canvas: #080B09;
+  --bg-surface: #101612;
+  --bg-surface-glass: rgba(16, 22, 18, 0.75);
+  --bg-surface-elevated: rgba(22, 32, 26, 0.85);
+  --border-subtle: rgba(34, 197, 94, 0.15);
+  --border-focus: rgba(34, 197, 94, 0.5);
+  --text-primary: #F8FAFC;
+  --text-secondary: #A1AAA4;
+  --text-muted: #64746B;
+  --accent-primary: #22C55E;
+  --accent-secondary: #4ADE80;
+  --glow-emerald: 0 0 20px -5px rgba(34, 197, 94, 0.25);
+  --shadow-glass: 0 10px 30px -10px rgba(0, 0, 0, 0.6);
+}
+
+.light {
+  --bg-canvas: #F7FAF7;
+  --bg-surface: #FFFFFF;
+  --bg-surface-glass: rgba(255, 255, 255, 0.85);
+  --bg-surface-elevated: rgba(245, 250, 246, 0.95);
+  --border-subtle: #DCE8DE;
+  --border-focus: #16A34A;
+  --text-primary: #17251B;
+  --text-secondary: #647067;
+  --text-muted: #8F9E93;
+  --accent-primary: #16A34A;
+  --accent-secondary: #22C55E;
+  --glow-emerald: 0 0 20px -5px rgba(22, 163, 74, 0.15);
+  --shadow-glass: 0 8px 24px -8px rgba(18, 50, 28, 0.08);
+}
+
+/* Frosted glass utilities */
+.glass-panel {
+  backdrop-filter: blur(12px);
+  -webkit-backdrop-filter: blur(12px);
+}
+
+/* Custom scrollbars */
+::-webkit-scrollbar {
+  width: 6px;
+  height: 6px;
+}
+
+.dark ::-webkit-scrollbar-track {
+  background: #080B09;
+}
+
+.dark ::-webkit-scrollbar-thumb {
+  background: rgba(34, 197, 94, 0.2);
+  border-radius: 9999px;
+}
+
+.dark ::-webkit-scrollbar-thumb:hover {
+  background: rgba(34, 197, 94, 0.4);
+}
+
+.light ::-webkit-scrollbar-track {
+  background: #F7FAF7;
+}
+
+.light ::-webkit-scrollbar-thumb {
+  background: #CBDAD0;
+  border-radius: 9999px;
+}
+
+.light ::-webkit-scrollbar-thumb:hover {
+  background: #A6BBAE;
+}
