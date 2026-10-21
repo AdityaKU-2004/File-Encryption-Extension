@@ -4,7 +4,7 @@
  */
 
 import React from 'react';
-import { ShieldCheck, Lock, KeyRound, AlertCircle } from 'lucide-react';
+import { ShieldCheck, Lock, KeyRound, AlertCircle, FileCheck } from 'lucide-react';
 import { GlassCard } from './GlassCard';
 
 export const SecurityNotice: React.FC = () => {
@@ -13,7 +13,7 @@ export const SecurityNotice: React.FC = () => {
       <div className="flex items-center gap-2.5 pb-3 border-b border-[#DCE8DE] dark:border-emerald-500/15">
         <ShieldCheck className="w-4 h-4 text-emerald-600 dark:text-emerald-400 shrink-0" />
         <h4 className="text-xs font-semibold uppercase tracking-wider text-[#17251B] dark:text-[#F8FAFC]">
-          Security & Cryptographic Standards
+          File Security & Cryptographic Standards
         </h4>
       </div>
 
@@ -24,10 +24,10 @@ export const SecurityNotice: React.FC = () => {
           </div>
           <div>
             <p className="text-xs font-medium text-[#17251B] dark:text-[#F8FAFC]">
-              Local Browser Execution
+              Local In-Browser Processing
             </p>
             <p className="text-xs text-[#647067] dark:text-[#A1AAA4] mt-0.5 leading-relaxed">
-              Cryptographic keys and operations run directly in your browser session via Web Crypto API. No data or telemetry is sent to any remote server.
+              Files are encrypted and decrypted directly in your browser using the native Web Crypto API. Your files never touch external servers or cloud services.
             </p>
           </div>
         </div>
@@ -41,7 +41,7 @@ export const SecurityNotice: React.FC = () => {
               Zero-Persistence Password Policy
             </p>
             <p className="text-xs text-[#647067] dark:text-[#A1AAA4] mt-0.5 leading-relaxed">
-              Passwords and raw plaintext exist in component memory strictly for the active operation and are never written to disk, cookies, or storage.
+              Passwords, raw encryption keys, and file contents exist strictly in temporary memory during processing and are never saved to localStorage or disk.
             </p>
           </div>
         </div>
@@ -52,24 +52,24 @@ export const SecurityNotice: React.FC = () => {
           </div>
           <div>
             <p className="text-xs font-medium text-[#17251B] dark:text-[#F8FAFC]">
-              AES-256-GCM + PBKDF2
+              Authenticated AES-256-GCM + PBKDF2
             </p>
             <p className="text-xs text-[#647067] dark:text-[#A1AAA4] mt-0.5 leading-relaxed">
-              Utilizes 256-bit Galois/Counter Mode with 128-bit authentication tag, 96-bit random IV, and PBKDF2 key derivation using HMAC-SHA-256.
+              Employs Galois/Counter Mode with 128-bit authentication tags, 96-bit random nonces, and PBKDF2 key derivation using SHA-256 and a 128-bit random salt.
             </p>
           </div>
         </div>
 
         <div className="flex items-start gap-3">
           <div className="p-1.5 rounded-lg bg-emerald-50 dark:bg-emerald-950/40 text-emerald-600 dark:text-emerald-400 shrink-0 mt-0.5">
-            <AlertCircle className="w-3.5 h-3.5" />
+            <FileCheck className="w-3.5 h-3.5" />
           </div>
           <div>
             <p className="text-xs font-medium text-[#17251B] dark:text-[#F8FAFC]">
-              Decryption Requirements
+              Byte-for-Byte Restoration & Metadata Defense
             </p>
             <p className="text-xs text-[#647067] dark:text-[#A1AAA4] mt-0.5 leading-relaxed">
-              Successful recovery requires the exact password. If a single character differs, the GCM authentication check will intentionally fail with zero plaintext leakage.
+              Original filenames and MIME types are encrypted inside the container. Decryption recovers exact binary bytes only upon valid authentication tag verification.
             </p>
           </div>
         </div>

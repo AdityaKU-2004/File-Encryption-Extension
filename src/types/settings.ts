@@ -10,8 +10,9 @@ export interface UserSettings {
   theme: ThemeMode;
   layoutMode: LayoutMode;
   defaultIterations: number;
-  confirmPasswordOnEncrypt: boolean;
   recordSessionHistory: boolean;
+  autoDownloadOnComplete: boolean;
+  sanitizeDownloadedFilenames: boolean;
 }
 
 export type ActivePage = 'dashboard' | 'encrypt' | 'decrypt' | 'history' | 'settings' | 'about';

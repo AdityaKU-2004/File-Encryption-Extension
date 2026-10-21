@@ -10,12 +10,19 @@ import {
   Trash2,
   Shield,
   Sliders,
-  Info,
   CheckCircle2,
   Smartphone,
   Monitor,
+  FileCheck,
+  HardDrive,
 } from 'lucide-react';
-import { ALLOWED_ITERATION_OPTIONS, APP_NAME, APP_TAGLINE, APP_VERSION } from '../../config/encryptionConfig';
+import {
+  ALLOWED_ITERATION_OPTIONS,
+  APP_NAME,
+  APP_TAGLINE,
+  APP_VERSION,
+  FILE_EXTENSION,
+} from '../../config/encryptionConfig';
 import { LayoutMode, ThemeMode } from '../../types/settings';
 import { Button } from '../common/Button';
 import { ConfirmDialog } from '../common/ConfirmDialog';
@@ -28,6 +35,10 @@ export interface SettingsSectionProps {
   onLayoutModeChange: (mode: LayoutMode) => void;
   defaultIterations: number;
   onDefaultIterationsChange: (iterations: number) => void;
+  recordHistory: boolean;
+  onRecordHistoryChange: (enabled: boolean) => void;
+  autoDownload: boolean;
+  onAutoDownloadChange: (enabled: boolean) => void;
   onClearHistory: () => void;
   onNotify?: (message: string, type?: 'success' | 'error' | 'info') => void;
   onNavigateToAbout?: () => void;
@@ -40,6 +51,10 @@ export const SettingsSection: React.FC<SettingsSectionProps> = ({
   onLayoutModeChange,
   defaultIterations,
   onDefaultIterationsChange,
+  recordHistory,
+  onRecordHistoryChange,
+  autoDownload,
+  onAutoDownloadChange,
   onClearHistory,
   onNotify,
   onNavigateToAbout,
@@ -53,7 +68,7 @@ export const SettingsSection: React.FC<SettingsSectionProps> = ({
           Settings
         </h2>
         <p className="text-sm text-[#647067] dark:text-[#A1AAA4] mt-1">
-          Manage appearance, cryptographic defaults, and privacy preferences.
+          Configure interface appearance, cryptographic defaults, privacy rules, and file handling.
         </p>
       </div>
 
@@ -140,7 +155,7 @@ export const SettingsSection: React.FC<SettingsSectionProps> = ({
       <GlassCard className="p-5 sm:p-6 space-y-4">
         <div className="pb-2 border-b border-[#DCE8DE] dark:border-emerald-500/15 flex items-center justify-between">
           <h3 className="text-xs font-semibold uppercase tracking-wider text-[#17251B] dark:text-[#F8FAFC]">
-            Cryptographic Engine Defaults
+            Cryptographic Engine Standards
           </h3>
           <span className="text-[11px] text-emerald-600 dark:text-emerald-400 font-mono">
             NIST & OWASP Aligned
@@ -152,7 +167,7 @@ export const SettingsSection: React.FC<SettingsSectionProps> = ({
             <div className="p-3 rounded-lg border border-[#DCE8DE] dark:border-emerald-500/15 bg-neutral-50 dark:bg-[#0B100D]">
               <span className="text-[#647067] dark:text-[#A1AAA4] block text-[11px]">Symmetric Cipher</span>
               <span className="font-mono font-semibold text-[#17251B] dark:text-emerald-400 mt-0.5 block">
-                AES-256-GCM
+                AES-256-GCM (256-bit)
               </span>
             </div>
 
@@ -164,9 +179,9 @@ export const SettingsSection: React.FC<SettingsSectionProps> = ({
             </div>
 
             <div className="p-3 rounded-lg border border-[#DCE8DE] dark:border-emerald-500/15 bg-neutral-50 dark:bg-[#0B100D]">
-              <span className="text-[#647067] dark:text-[#A1AAA4] block text-[11px]">Envelope Encoding</span>
+              <span className="text-[#647067] dark:text-[#A1AAA4] block text-[11px]">Container Format</span>
               <span className="font-mono font-semibold text-[#17251B] dark:text-emerald-400 mt-0.5 block">
-                Base64 JSON Container
+                SecureVault Binary ({FILE_EXTENSION})
               </span>
             </div>
           </div>
@@ -184,7 +199,7 @@ export const SettingsSection: React.FC<SettingsSectionProps> = ({
               onChange={(e) => {
                 const val = Number(e.target.value);
                 onDefaultIterationsChange(val);
-                onNotify?.(`Default iterations updated to ${val.toLocaleString()}`, 'success');
+                onNotify?.(`Default iterations set to ${val.toLocaleString()}`, 'success');
               }}
               className="w-full text-xs rounded-lg border py-2 px-3 bg-white text-[#17251B] border-[#DCE8DE] focus:border-emerald-600 focus:outline-none dark:bg-[#0B100D] dark:text-[#F8FAFC] dark:border-emerald-500/20 dark:focus:border-emerald-500"
             >
@@ -198,17 +213,71 @@ export const SettingsSection: React.FC<SettingsSectionProps> = ({
         </div>
       </GlassCard>
 
-      {/* Section 3: Privacy & Session Hygiene */}
+      {/* Section 3: File Handling & Downloads */}
       <GlassCard className="p-5 sm:p-6 space-y-4">
         <div className="pb-2 border-b border-[#DCE8DE] dark:border-emerald-500/15">
           <h3 className="text-xs font-semibold uppercase tracking-wider text-[#17251B] dark:text-[#F8FAFC]">
-            Privacy & Session Hygiene
+            File Handling & Downloads
+          </h3>
+        </div>
+
+        <div className="space-y-3 text-xs">
+          <label className="flex items-start gap-3 cursor-pointer">
+            <input
+              type="checkbox"
+              checked={autoDownload}
+              onChange={(e) => onAutoDownloadChange(e.target.checked)}
+              className="rounded accent-emerald-500 mt-0.5"
+            />
+            <div>
+              <span className="font-medium text-[#17251B] dark:text-[#F8FAFC]">
+                Auto-trigger download on single file completion
+              </span>
+              <p className="text-[11px] text-[#647067] dark:text-[#A1AAA4] mt-0.5">
+                Automatically prompt your browser to save the completed file upon successful operation.
+              </p>
+            </div>
+          </label>
+
+          <div className="p-3 rounded-lg border border-[#DCE8DE] dark:border-emerald-500/15 bg-neutral-50 dark:bg-[#0B100D] space-y-1">
+            <span className="font-medium text-[#17251B] dark:text-[#F8FAFC] flex items-center gap-1.5">
+              <FileCheck className="w-3.5 h-3.5 text-emerald-500" /> Filename Sanitization Active
+            </span>
+            <p className="text-[11px] text-[#647067] dark:text-[#A1AAA4]">
+              Decrypted filenames are strictly sanitized before download to prevent directory traversal and filesystem injection risks.
+            </p>
+          </div>
+        </div>
+      </GlassCard>
+
+      {/* Section 4: Privacy & History Management */}
+      <GlassCard className="p-5 sm:p-6 space-y-4">
+        <div className="pb-2 border-b border-[#DCE8DE] dark:border-emerald-500/15">
+          <h3 className="text-xs font-semibold uppercase tracking-wider text-[#17251B] dark:text-[#F8FAFC]">
+            Privacy & History Management
           </h3>
         </div>
 
         <div className="space-y-3 text-xs text-[#647067] dark:text-[#A1AAA4]">
-          <p className="leading-relaxed">
-            SecureVault implements a zero-knowledge local architecture. Plaintext messages and passwords never touch non-volatile storage, analytics, or external servers.
+          <label className="flex items-start gap-3 cursor-pointer">
+            <input
+              type="checkbox"
+              checked={recordHistory}
+              onChange={(e) => onRecordHistoryChange(e.target.checked)}
+              className="rounded accent-emerald-500 mt-0.5"
+            />
+            <div>
+              <span className="font-medium text-[#17251B] dark:text-[#F8FAFC]">
+                Record session operational history
+              </span>
+              <p className="text-[11px] text-[#647067] dark:text-[#A1AAA4] mt-0.5">
+                Retains metadata (filename, size, timestamp) in volatile memory during your browser session. Disable for zero history retention.
+              </p>
+            </div>
+          </label>
+
+          <p className="leading-relaxed pt-2">
+            SecureVault operates in-memory only. Files and passwords never touch remote servers, tracking services, or persistent browser storage.
           </p>
 
           <div className="pt-2">
@@ -224,7 +293,7 @@ export const SettingsSection: React.FC<SettingsSectionProps> = ({
         </div>
       </GlassCard>
 
-      {/* Section 4: Application Metadata */}
+      {/* Section 5: Application Metadata */}
       <GlassCard className="p-5 sm:p-6 space-y-3">
         <div className="flex items-center justify-between">
           <div>
@@ -250,10 +319,10 @@ export const SettingsSection: React.FC<SettingsSectionProps> = ({
         onClose={() => setShowClearConfirm(false)}
         onConfirm={() => {
           onClearHistory();
-          onNotify?.('Session memory and history cleared', 'success');
+          onNotify?.('Session file history purged', 'success');
         }}
         title="Purge Session Memory"
-        message="This action will immediately wipe the in-memory activity log and reset temporary workspace caches."
+        message="This will immediately remove all file operational logs from temporary session memory."
         confirmLabel="Purge Everything"
         isDestructive
       />

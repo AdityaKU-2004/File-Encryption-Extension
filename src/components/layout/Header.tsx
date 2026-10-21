@@ -35,27 +35,27 @@ export const Header: React.FC<HeaderProps> = ({
   const pageDetails: Record<ActivePage, { title: string; description: string }> = {
     dashboard: {
       title: 'Dashboard Overview',
-      description: 'Privacy-focused local text encryption and decryption workspace.',
+      description: 'Local in-browser file encryption and decryption workspace.',
     },
     encrypt: {
-      title: 'Encrypt Text',
-      description: 'Protect sensitive messages with password-derived AES-256-GCM.',
+      title: 'Encrypt Files',
+      description: 'Select files to protect with password-derived AES-256-GCM.',
     },
     decrypt: {
-      title: 'Decrypt Text',
-      description: 'Recover original plaintext using your encryption key.',
+      title: 'Decrypt Files',
+      description: 'Recover original files byte-for-byte from .svault containers.',
     },
     history: {
-      title: 'Encryption History',
-      description: 'Strict non-persistent session audit log of cryptographic operations.',
+      title: 'File History',
+      description: 'Strict session audit log of file cryptographic operations.',
     },
     settings: {
       title: 'Settings & Preferences',
-      description: 'Configure appearance, iteration count, and privacy hygiene.',
+      description: 'Configure appearance, iteration count, and file handling defaults.',
     },
     about: {
       title: 'About SecureVault',
-      description: 'Zero-knowledge browser extension design and threat model disclosures.',
+      description: 'Zero-knowledge browser extension design and binary container specifications.',
     },
   };
 
@@ -87,10 +87,10 @@ export const Header: React.FC<HeaderProps> = ({
 
       {/* Right: Security Status + Layout Switcher + Theme Toggle */}
       <div className="flex items-center gap-2 sm:gap-3 shrink-0">
-        {/* Security status indicator (Anti-slop compliant: clean unboxed status without pulsing dot) */}
+        {/* Security status indicator */}
         <div className="hidden md:flex items-center gap-1.5 text-xs text-emerald-700 dark:text-emerald-400 font-medium px-2.5 py-1 rounded-lg bg-emerald-50 dark:bg-[#101612] border border-emerald-500/20">
           <ShieldCheck className="w-3.5 h-3.5" />
-          <span>Web Crypto Active</span>
+          <span>Local Crypto Engine Ready</span>
         </div>
 
         {/* Layout preview toggle */}

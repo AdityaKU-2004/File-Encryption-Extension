@@ -1,6 +1,6 @@
 {
   "name": "SecureVault",
-  "description": "Privacy-focused browser encryption extension for secure local text encryption and decryption using AES-256-GCM and PBKDF2.",
+  "description": "Privacy-focused browser extension for secure local file encryption and decryption using AES-256-GCM and PBKDF2.",
   "requestFramePermissions": [],
   "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
 }

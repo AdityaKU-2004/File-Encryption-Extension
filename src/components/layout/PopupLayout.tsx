@@ -3,35 +3,35 @@
  * SPDX-License-Identifier: Apache-2.0
  */
 
-import React, { useState } from 'react';
+import React, { useRef, useState } from 'react';
 import {
   Lock,
   Unlock,
-  KeyRound,
   Shield,
-  Copy,
-  Check,
   Download,
   Trash2,
   Sun,
   Moon,
   Maximize2,
-  Settings,
-  Sparkles,
   AlertCircle,
+  FileUp,
   Clock,
+  CheckCircle2,
 } from 'lucide-react';
-import { APP_NAME, APP_VERSION } from '../../config/encryptionConfig';
-import { encryptionService } from '../../services/encryptionService';
-import { decryptionService } from '../../services/decryptionService';
+import { APP_NAME, APP_VERSION, FILE_EXTENSION } from '../../config/encryptionConfig';
+import { useFileSelection } from '../../hooks/useFileSelection';
+import { decryptFile } from '../../services/fileDecryptionService';
+import { encryptFile } from '../../services/fileEncryptionService';
 import { calculatePasswordStrength } from '../../services/passwordService';
-import { HistoryEntry } from '../../types/history';
-import { LayoutMode, ThemeMode } from '../../types/settings';
-import { copyToClipboard, readFromClipboard } from '../../utils/clipboard';
-import { downloadTextFile } from '../../utils/download';
+import { FileHistoryEntry } from '../../types/history';
+import { ThemeMode } from '../../types/settings';
+import { downloadBlob } from '../../utils/download';
+import { FileIcon } from '../../utils/fileIcons';
+import { formatFileSize } from '../../utils/fileSize';
+import { getEncryptedFilename } from '../../utils/filename';
 import { Button } from '../common/Button';
-import { GlassCard } from '../common/GlassCard';
 import { IconButton } from '../common/IconButton';
+import { FileProgress } from '../files/FileProgress';
 import { PasswordGenerator } from '../password/PasswordGenerator';
 import { PasswordInput } from '../password/PasswordInput';
 import { PasswordStrength } from '../password/PasswordStrength';
@@ -40,7 +40,7 @@ export interface PopupLayoutProps {
   theme: ThemeMode;
   onToggleTheme: () => void;
   onSwitchToDashboard: () => void;
-  onRecordHistory?: (entry: Omit<HistoryEntry, 'id'>) => void;
+  onRecordHistory?: (entry: Omit<FileHistoryEntry, 'id'>) => void;
   onNotify?: (message: string, type?: 'success' | 'error' | 'info') => void;
 }
 
@@ -55,94 +55,105 @@ export const PopupLayout: React.FC<PopupLayoutProps> = ({
 }) => {
   const [activeTab, setActiveTab] = useState<PopupTab>('encrypt');
 
-  // Encrypt state
-  const [encryptText, setEncryptText] = useState('');
+  // Encryption tab state
+  const encryptSelection = useFileSelection('encrypt');
   const [encryptPassword, setEncryptPassword] = useState('');
-  const [encryptResult, setEncryptResult] = useState<string | null>(null);
-  const [encryptTimeMs, setEncryptTimeMs] = useState<number | null>(null);
   const [isEncrypting, setIsEncrypting] = useState(false);
   const [encryptError, setEncryptError] = useState<string | null>(null);
+  const encryptFileRef = useRef<HTMLInputElement>(null);
 
-  // Decrypt state
-  const [decryptInput, setDecryptInput] = useState('');
+  // Decryption tab state
+  const decryptSelection = useFileSelection('decrypt');
   const [decryptPassword, setDecryptPassword] = useState('');
-  const [decryptResult, setDecryptResult] = useState<string | null>(null);
-  const [decryptTimeMs, setDecryptTimeMs] = useState<number | null>(null);
   const [isDecrypting, setIsDecrypting] = useState(false);
   const [decryptError, setDecryptError] = useState<string | null>(null);
-
-  // Copy states
-  const [copiedEncrypted, setCopiedEncrypted] = useState(false);
-  const [copiedDecrypted, setCopiedDecrypted] = useState(false);
+  const decryptFileRef = useRef<HTMLInputElement>(null);
 
   const encryptStrength = calculatePasswordStrength(encryptPassword);
 
-  // Paste handlers
-  const handlePasteToEncrypt = async () => {
-    const res = await readFromClipboard();
-    if (res.success && res.text) {
-      setEncryptText(res.text);
-      setEncryptError(null);
-    }
-  };
-
-  const handlePasteToDecrypt = async () => {
-    const res = await readFromClipboard();
-    if (res.success && res.text) {
-      setDecryptInput(res.text);
-      setDecryptError(null);
-    }
-  };
-
-  // Encrypt execution
-  const handleEncryptSubmit = async (e: React.FormEvent) => {
+  // Run encryption
+  const handleRunEncrypt = async (e: React.FormEvent) => {
     e.preventDefault();
     setEncryptError(null);
 
-    if (!encryptText.trim()) {
-      setEncryptError('Please enter text to encrypt.');
+    if (encryptSelection.selectedFiles.length === 0) {
+      setEncryptError('Please choose a file to encrypt.');
       return;
     }
     if (!encryptPassword) {
       setEncryptError('Password is required.');
       return;
     }
+    if (encryptPassword.length < 8) {
+      setEncryptError('Password must be at least 8 characters.');
+      return;
+    }
 
     setIsEncrypting(true);
 
-    try {
-      const res = await encryptionService.encrypt({
-        plaintext: encryptText,
-        password: encryptPassword,
+    for (const item of encryptSelection.selectedFiles) {
+      encryptSelection.updateFileStatus(item.id, {
+        status: 'encrypting',
+        progress: 0,
+        processedBytes: 0,
       });
 
-      if (res.success) {
-        setEncryptResult(res.encryptedText);
-        setEncryptTimeMs(res.executionTimeMs);
-        onRecordHistory?.({
-          operation: 'encrypt',
-          status: 'success',
-          timestamp: Date.now(),
-          characterCount: encryptText.length,
-          executionTimeMs: res.executionTimeMs,
-          algorithm: 'AES-256-GCM',
+      try {
+        const res = await encryptFile({
+          file: item.file,
+          password: encryptPassword,
+          onProgress: (pBytes) => {
+            encryptSelection.updateFileStatus(item.id, {
+              processedBytes: pBytes,
+              progress: Math.round((pBytes / item.size) * 100),
+            });
+          },
         });
-        onNotify?.('Message encrypted locally', 'success');
-      } else {
-        setEncryptError(res.error || 'Encryption failed.');
+
+        if (res.success && res.encryptedBlob) {
+          encryptSelection.updateFileStatus(item.id, {
+            status: 'completed',
+            progress: 100,
+            processedBytes: item.size,
+            encryptedBlob: res.encryptedBlob,
+            executionTimeMs: res.executionTimeMs,
+          });
+
+          onRecordHistory?.({
+            filename: item.name,
+            operation: 'encrypt',
+            status: 'success',
+            timestamp: Date.now(),
+            fileSize: item.size,
+            executionTimeMs: res.executionTimeMs,
+            algorithm: 'AES-256-GCM',
+          });
+
+          onNotify?.(`Encrypted ${item.name} with AES-256-GCM`, 'success');
+        } else {
+          encryptSelection.updateFileStatus(item.id, {
+            status: 'failed',
+            errorMessage: res.error || 'Encryption failed.',
+          });
+        }
+      } catch (err) {
+        encryptSelection.updateFileStatus(item.id, {
+          status: 'failed',
+          errorMessage: err instanceof Error ? err.message : 'Encryption failed.',
+        });
       }
-    } finally {
-      setIsEncrypting(false);
     }
+
+    setIsEncrypting(false);
   };
 
-  // Decrypt execution
-  const handleDecryptSubmit = async (e: React.FormEvent) => {
+  // Run decryption
+  const handleRunDecrypt = async (e: React.FormEvent) => {
     e.preventDefault();
     setDecryptError(null);
 
-    if (!decryptInput.trim()) {
-      setDecryptError('Please paste encrypted payload.');
+    if (decryptSelection.selectedFiles.length === 0) {
+      setDecryptError('Please choose an encrypted .svault file.');
       return;
     }
     if (!decryptPassword) {
@@ -152,59 +163,64 @@ export const PopupLayout: React.FC<PopupLayoutProps> = ({
 
     setIsDecrypting(true);
 
-    try {
-      const res = await decryptionService.decrypt({
-        encryptedText: decryptInput,
-        password: decryptPassword,
+    for (const item of decryptSelection.selectedFiles) {
+      decryptSelection.updateFileStatus(item.id, {
+        status: 'decrypting',
+        progress: 0,
+        processedBytes: 0,
       });
 
-      if (res.success && res.decryptedText !== undefined) {
-        setDecryptResult(res.decryptedText);
-        setDecryptTimeMs(res.executionTimeMs);
-        onRecordHistory?.({
-          operation: 'decrypt',
-          status: 'success',
-          timestamp: Date.now(),
-          characterCount: decryptInput.length,
-          executionTimeMs: res.executionTimeMs,
-          algorithm: 'AES-256-GCM',
+      try {
+        const res = await decryptFile({
+          file: item.file,
+          password: decryptPassword,
+          onProgress: (pBytes) => {
+            decryptSelection.updateFileStatus(item.id, {
+              processedBytes: pBytes,
+              progress: Math.round((pBytes / item.size) * 100),
+            });
+          },
         });
-        onNotify?.('Message decrypted successfully', 'success');
-      } else {
-        setDecryptError(res.error || 'Decryption failed.');
-        onRecordHistory?.({
-          operation: 'decrypt',
-          status: 'failure',
-          timestamp: Date.now(),
-          characterCount: decryptInput.length,
-          executionTimeMs: res.executionTimeMs,
-          algorithm: 'AES-256-GCM',
-          errorMessage: res.error,
+
+        if (res.success && res.decryptedBlob) {
+          decryptSelection.updateFileStatus(item.id, {
+            status: 'completed',
+            progress: 100,
+            processedBytes: item.size,
+            decryptedBlob: res.decryptedBlob,
+            recoveredFilename: res.originalFilename,
+            recoveredMimeType: res.originalMimeType,
+            executionTimeMs: res.executionTimeMs,
+          });
+
+          onRecordHistory?.({
+            filename: res.originalFilename || item.name,
+            operation: 'decrypt',
+            status: 'success',
+            timestamp: Date.now(),
+            fileSize: res.originalSize || item.size,
+            executionTimeMs: res.executionTimeMs,
+            algorithm: 'AES-256-GCM',
+          });
+
+          onNotify?.(`Decrypted and restored ${res.originalFilename}`, 'success');
+        } else {
+          decryptSelection.updateFileStatus(item.id, {
+            status: 'failed',
+            errorMessage:
+              res.error ||
+              'Decryption failed. The password may be incorrect, or the file may be corrupted.',
+          });
+        }
+      } catch (err) {
+        decryptSelection.updateFileStatus(item.id, {
+          status: 'failed',
+          errorMessage: err instanceof Error ? err.message : 'Decryption failed.',
         });
       }
-    } finally {
-      setIsDecrypting(false);
     }
-  };
 
-  const handleCopyEncryptedResult = async () => {
-    if (!encryptResult) return;
-    const res = await copyToClipboard(encryptResult);
-    if (res.success) {
-      setCopiedEncrypted(true);
-      onNotify?.('Copied to clipboard', 'info');
-      setTimeout(() => setCopiedEncrypted(false), 2000);
-    }
-  };
-
-  const handleCopyDecryptedResult = async () => {
-    if (!decryptResult) return;
-    const res = await copyToClipboard(decryptResult);
-    if (res.success) {
-      setCopiedDecrypted(true);
-      onNotify?.('Copied to clipboard', 'info');
-      setTimeout(() => setCopiedDecrypted(false), 2000);
-    }
+    setIsDecrypting(false);
   };
 
   return (
@@ -305,58 +321,105 @@ export const PopupLayout: React.FC<PopupLayoutProps> = ({
 
         {/* 3. Tab Body */}
         <div className="p-4 space-y-4 max-h-[500px] overflow-y-auto">
-          {/* TAB 1: ENCRYPT */}
+          {/* TAB 1: ENCRYPT FILES */}
           {activeTab === 'encrypt' && (
-            <form onSubmit={handleEncryptSubmit} className="space-y-3.5">
-              {/* Text Input */}
-              <div className="space-y-1">
-                <div className="flex items-center justify-between text-xs">
-                  <span className="font-semibold text-[#647067] dark:text-[#A1AAA4]">Plaintext</span>
-                  <div className="flex items-center gap-1">
+            <form onSubmit={handleRunEncrypt} className="space-y-3.5">
+              <input
+                ref={encryptFileRef}
+                type="file"
+                multiple
+                onChange={(e) => {
+                  if (e.target.files) encryptSelection.addFiles(e.target.files);
+                  e.target.value = '';
+                }}
+                className="hidden"
+              />
+
+              {/* File selector or current file card */}
+              {encryptSelection.selectedFiles.length === 0 ? (
+                <div
+                  onClick={() => encryptFileRef.current?.click()}
+                  className="p-4 rounded-xl border border-dashed border-[#DCE8DE] dark:border-emerald-500/20 bg-neutral-50/50 dark:bg-[#0B100D] text-center cursor-pointer hover:border-emerald-500/40 transition-colors"
+                >
+                  <FileUp className="w-6 h-6 text-emerald-500 mx-auto mb-1.5" />
+                  <p className="text-xs font-medium text-[#17251B] dark:text-[#F8FAFC]">
+                    Choose files to encrypt
+                  </p>
+                  <p className="text-[10px] text-[#647067] dark:text-[#A1AAA4] mt-0.5">
+                    Videos, documents, spreadsheets, images, archives
+                  </p>
+                </div>
+              ) : (
+                <div className="space-y-2">
+                  <div className="flex items-center justify-between text-[11px]">
+                    <span className="font-semibold text-[#17251B] dark:text-[#F8FAFC]">
+                      {encryptSelection.selectedFiles.length} file{encryptSelection.selectedFiles.length === 1 ? '' : 's'} ({formatFileSize(encryptSelection.totalSizeBytes)})
+                    </span>
                     <button
                       type="button"
-                      onClick={handlePasteToEncrypt}
-                      className="text-[11px] text-emerald-600 dark:text-emerald-400 hover:underline cursor-pointer"
+                      onClick={encryptSelection.clearAllFiles}
+                      className="text-red-500 hover:underline cursor-pointer"
                     >
-                      Paste
+                      Clear
                     </button>
-                    {encryptText && (
-                      <>
-                        <span className="text-neutral-400">·</span>
-                        <button
-                          type="button"
-                          onClick={() => setEncryptText('')}
-                          className="text-[11px] text-red-500 hover:underline cursor-pointer"
-                        >
-                          Clear
-                        </button>
-                      </>
-                    )}
                   </div>
+
+                  {encryptSelection.selectedFiles.slice(0, 3).map((item) => (
+                    <div
+                      key={item.id}
+                      className="p-2.5 rounded-lg border border-[#DCE8DE] dark:border-emerald-500/15 bg-neutral-50/50 dark:bg-[#0B100D] flex items-center justify-between text-xs"
+                    >
+                      <div className="flex items-center gap-2 min-w-0">
+                        <FileIcon category={item.category} size="sm" />
+                        <span className="truncate max-w-[170px] text-[#17251B] dark:text-[#F8FAFC]">
+                          {item.name}
+                        </span>
+                      </div>
+                      <div className="flex items-center gap-2 shrink-0">
+                        <span className="text-[10px] font-mono text-[#647067] dark:text-[#A1AAA4]">
+                          {formatFileSize(item.size)}
+                        </span>
+                        {item.status === 'completed' && item.encryptedBlob && (
+                          <IconButton
+                            aria-label="Download encrypted file"
+                            size="sm"
+                            onClick={() => downloadBlob(item.encryptedBlob!, getEncryptedFilename(item.name))}
+                          >
+                            <Download className="w-3 h-3 text-emerald-500" />
+                          </IconButton>
+                        )}
+                        {item.status === 'idle' && (
+                          <IconButton
+                            aria-label="Remove file"
+                            size="sm"
+                            onClick={() => encryptSelection.removeFile(item.id)}
+                          >
+                            <Trash2 className="w-3 h-3 text-neutral-400 hover:text-red-500" />
+                          </IconButton>
+                        )}
+                      </div>
+                    </div>
+                  ))}
+
+                  {encryptSelection.selectedFiles.length > 3 && (
+                    <p className="text-[10px] text-center text-[#647067] dark:text-[#A1AAA4]">
+                      + {encryptSelection.selectedFiles.length - 3} more files
+                    </p>
+                  )}
                 </div>
+              )}
 
-                <textarea
-                  value={encryptText}
-                  onChange={(e) => {
-                    setEncryptText(e.target.value);
-                    if (encryptError) setEncryptError(null);
-                  }}
-                  rows={3}
-                  placeholder="Enter text to encrypt..."
-                  className="w-full text-xs rounded-lg border p-2.5 bg-neutral-50 dark:bg-[#0B100D] text-[#17251B] dark:text-[#F8FAFC] border-[#DCE8DE] dark:border-emerald-500/20 focus:border-emerald-500 focus:outline-none resize-none"
-                />
-              </div>
-
-              {/* Password Input */}
+              {/* Password */}
               <PasswordInput
                 label="Password"
-                placeholder="Enter password..."
+                placeholder="Enter encryption password..."
                 value={encryptPassword}
                 onChange={(e) => {
                   setEncryptPassword(e.target.value);
                   if (encryptError) setEncryptError(null);
                 }}
                 onClear={() => setEncryptPassword('')}
+                disabled={isEncrypting}
               />
 
               {encryptPassword && (
@@ -370,99 +433,114 @@ export const PopupLayout: React.FC<PopupLayoutProps> = ({
                 </div>
               )}
 
-              {/* Encrypt Submit */}
               <Button
                 type="submit"
                 size="sm"
                 className="w-full"
                 isLoading={isEncrypting}
                 leftIcon={<Lock className="w-3.5 h-3.5" />}
-                disabled={!encryptText.trim() || !encryptPassword}
+                disabled={!encryptSelection.hasFiles || !encryptPassword}
               >
-                Encrypt with AES-256-GCM
+                {isEncrypting ? 'Encrypting with AES-GCM...' : 'Encrypt Files'}
               </Button>
-
-              {/* Encrypt Output */}
-              {encryptResult && (
-                <div className="p-3 rounded-lg border border-emerald-500/30 bg-emerald-50/50 dark:bg-emerald-950/20 space-y-2 mt-2">
-                  <div className="flex items-center justify-between text-xs font-medium text-emerald-700 dark:text-emerald-400">
-                    <span>Ciphertext Envelope</span>
-                    {encryptTimeMs !== null && (
-                      <span className="font-mono text-[10px]">{encryptTimeMs}ms</span>
-                    )}
-                  </div>
-
-                  <div className="max-h-24 overflow-y-auto p-2 rounded bg-neutral-100 dark:bg-[#080B09] font-mono text-[11px] break-all select-all text-[#17251B] dark:text-[#E2E8F0]">
-                    {encryptResult}
-                  </div>
-
-                  <div className="flex items-center justify-end gap-1.5 pt-1">
-                    <Button
-                      type="button"
-                      variant="outline"
-                      size="sm"
-                      leftIcon={<Download className="w-3 h-3" />}
-                      onClick={() => downloadTextFile(encryptResult, 'securevault-encrypted.txt')}
-                    >
-                      Save TXT
-                    </Button>
-                    <Button
-                      type="button"
-                      size="sm"
-                      leftIcon={copiedEncrypted ? <Check className="w-3 h-3" /> : <Copy className="w-3 h-3" />}
-                      onClick={handleCopyEncryptedResult}
-                    >
-                      {copiedEncrypted ? 'Copied' : 'Copy'}
-                    </Button>
-                  </div>
-                </div>
-              )}
             </form>
           )}
 
-          {/* TAB 2: DECRYPT */}
+          {/* TAB 2: DECRYPT FILES */}
           {activeTab === 'decrypt' && (
-            <form onSubmit={handleDecryptSubmit} className="space-y-3.5">
-              {/* Encrypted Input */}
-              <div className="space-y-1">
-                <div className="flex items-center justify-between text-xs">
-                  <span className="font-semibold text-[#647067] dark:text-[#A1AAA4]">Ciphertext</span>
-                  <div className="flex items-center gap-1">
+            <form onSubmit={handleRunDecrypt} className="space-y-3.5">
+              <input
+                ref={decryptFileRef}
+                type="file"
+                multiple
+                accept=".svault,*/*"
+                onChange={(e) => {
+                  if (e.target.files) decryptSelection.addFiles(e.target.files);
+                  e.target.value = '';
+                }}
+                className="hidden"
+              />
+
+              {/* File selector or current file card */}
+              {decryptSelection.selectedFiles.length === 0 ? (
+                <div
+                  onClick={() => decryptFileRef.current?.click()}
+                  className="p-4 rounded-xl border border-dashed border-[#DCE8DE] dark:border-emerald-500/20 bg-neutral-50/50 dark:bg-[#0B100D] text-center cursor-pointer hover:border-emerald-500/40 transition-colors"
+                >
+                  <Unlock className="w-6 h-6 text-emerald-500 mx-auto mb-1.5" />
+                  <p className="text-xs font-medium text-[#17251B] dark:text-[#F8FAFC]">
+                    Choose .svault files
+                  </p>
+                  <p className="text-[10px] text-[#647067] dark:text-[#A1AAA4] mt-0.5">
+                    Select encrypted SecureVault containers
+                  </p>
+                </div>
+              ) : (
+                <div className="space-y-2">
+                  <div className="flex items-center justify-between text-[11px]">
+                    <span className="font-semibold text-[#17251B] dark:text-[#F8FAFC]">
+                      {decryptSelection.selectedFiles.length} encrypted file{decryptSelection.selectedFiles.length === 1 ? '' : 's'}
+                    </span>
                     <button
                       type="button"
-                      onClick={handlePasteToDecrypt}
-                      className="text-[11px] text-emerald-600 dark:text-emerald-400 hover:underline cursor-pointer"
+                      onClick={decryptSelection.clearAllFiles}
+                      className="text-red-500 hover:underline cursor-pointer"
                     >
-                      Paste
+                      Clear
                     </button>
-                    {decryptInput && (
-                      <>
-                        <span className="text-neutral-400">·</span>
-                        <button
-                          type="button"
-                          onClick={() => setDecryptInput('')}
-                          className="text-[11px] text-red-500 hover:underline cursor-pointer"
-                        >
-                          Clear
-                        </button>
-                      </>
-                    )}
                   </div>
+
+                  {decryptSelection.selectedFiles.map((item) => (
+                    <div
+                      key={item.id}
+                      className="p-2.5 rounded-lg border border-[#DCE8DE] dark:border-emerald-500/15 bg-neutral-50/50 dark:bg-[#0B100D] space-y-1 text-xs"
+                    >
+                      <div className="flex items-center justify-between">
+                        <div className="flex items-center gap-2 min-w-0">
+                          <FileIcon category={item.category} size="sm" />
+                          <span className="truncate max-w-[170px] text-[#17251B] dark:text-[#F8FAFC]">
+                            {item.name}
+                          </span>
+                        </div>
+                        <div className="flex items-center gap-1.5 shrink-0">
+                          {item.status === 'completed' && item.decryptedBlob && (
+                            <IconButton
+                              aria-label="Download recovered file"
+                              size="sm"
+                              onClick={() => downloadBlob(item.decryptedBlob!, item.recoveredFilename || 'recovered_file')}
+                            >
+                              <Download className="w-3.5 h-3.5 text-emerald-500" />
+                            </IconButton>
+                          )}
+                          {item.status === 'idle' && (
+                            <IconButton
+                              aria-label="Remove file"
+                              size="sm"
+                              onClick={() => decryptSelection.removeFile(item.id)}
+                            >
+                              <Trash2 className="w-3 h-3 text-neutral-400 hover:text-red-500" />
+                            </IconButton>
+                          )}
+                        </div>
+                      </div>
+
+                      {item.recoveredFilename && (
+                        <p className="text-[11px] text-emerald-600 dark:text-emerald-400 font-medium">
+                          Restored: {item.recoveredFilename}
+                        </p>
+                      )}
+
+                      {item.errorMessage && (
+                        <p className="text-[11px] text-red-500">
+                          {item.errorMessage}
+                        </p>
+                      )}
+                    </div>
+                  ))}
                 </div>
+              )}
 
-                <textarea
-                  value={decryptInput}
-                  onChange={(e) => {
-                    setDecryptInput(e.target.value);
-                    if (decryptError) setDecryptError(null);
-                  }}
-                  rows={3}
-                  placeholder="Paste SECUREVAULT:v1:... message"
-                  className="w-full text-xs font-mono rounded-lg border p-2.5 bg-neutral-50 dark:bg-[#0B100D] text-[#17251B] dark:text-[#F8FAFC] border-[#DCE8DE] dark:border-emerald-500/20 focus:border-emerald-500 focus:outline-none resize-none"
-                />
-              </div>
-
-              {/* Password Input */}
+              {/* Password */}
               <PasswordInput
                 label="Password"
                 placeholder="Enter decryption password..."
@@ -472,6 +550,7 @@ export const PopupLayout: React.FC<PopupLayoutProps> = ({
                   if (decryptError) setDecryptError(null);
                 }}
                 onClear={() => setDecryptPassword('')}
+                disabled={isDecrypting}
               />
 
               {decryptError && (
@@ -481,53 +560,16 @@ export const PopupLayout: React.FC<PopupLayoutProps> = ({
                 </div>
               )}
 
-              {/* Decrypt Submit */}
               <Button
                 type="submit"
                 size="sm"
                 className="w-full"
                 isLoading={isDecrypting}
                 leftIcon={<Unlock className="w-3.5 h-3.5" />}
-                disabled={!decryptInput.trim() || !decryptPassword}
+                disabled={!decryptSelection.hasFiles || !decryptPassword}
               >
-                Decrypt & Authenticate
+                {isDecrypting ? 'Decrypting and Authenticating...' : 'Decrypt Files'}
               </Button>
-
-              {/* Decrypt Output */}
-              {decryptResult !== null && (
-                <div className="p-3 rounded-lg border border-emerald-500/30 bg-emerald-50/50 dark:bg-emerald-950/20 space-y-2 mt-2">
-                  <div className="flex items-center justify-between text-xs font-medium text-emerald-700 dark:text-emerald-400">
-                    <span>Decrypted Plaintext</span>
-                    {decryptTimeMs !== null && (
-                      <span className="font-mono text-[10px]">{decryptTimeMs}ms</span>
-                    )}
-                  </div>
-
-                  <div className="max-h-24 overflow-y-auto p-2 rounded bg-neutral-100 dark:bg-[#080B09] text-xs whitespace-pre-wrap select-all text-[#17251B] dark:text-[#F8FAFC]">
-                    {decryptResult}
-                  </div>
-
-                  <div className="flex items-center justify-end gap-1.5 pt-1">
-                    <Button
-                      type="button"
-                      variant="outline"
-                      size="sm"
-                      leftIcon={<Download className="w-3 h-3" />}
-                      onClick={() => downloadTextFile(decryptResult, 'securevault-decrypted.txt')}
-                    >
-                      Save TXT
-                    </Button>
-                    <Button
-                      type="button"
-                      size="sm"
-                      leftIcon={copiedDecrypted ? <Check className="w-3 h-3" /> : <Copy className="w-3 h-3" />}
-                      onClick={handleCopyDecryptedResult}
-                    >
-                      {copiedDecrypted ? 'Copied' : 'Copy'}
-                    </Button>
-                  </div>
-                </div>
-              )}
             </form>
           )}
 
@@ -552,9 +594,9 @@ export const PopupLayout: React.FC<PopupLayoutProps> = ({
                 </span>
                 <div className="grid grid-cols-2 gap-2 text-[11px] text-[#647067] dark:text-[#A1AAA4]">
                   <div>Cipher: AES-256-GCM</div>
-                  <div>KDF: PBKDF2</div>
+                  <div>KDF: PBKDF2 (SHA-256)</div>
+                  <div>Format: .svault</div>
                   <div>Salt: 128-bit random</div>
-                  <div>IV: 96-bit random</div>
                 </div>
               </div>
 
@@ -563,7 +605,7 @@ export const PopupLayout: React.FC<PopupLayoutProps> = ({
                   Privacy Policy
                 </span>
                 <p className="text-[11px] text-[#647067] dark:text-[#A1AAA4] leading-relaxed">
-                  100% in-browser processing. Zero telemetry or server calls. Passwords and plaintexts are never persisted to disk.
+                  100% in-browser processing. Zero telemetry or server calls. Passwords and file contents are never persisted to disk.
                 </p>
               </div>
 

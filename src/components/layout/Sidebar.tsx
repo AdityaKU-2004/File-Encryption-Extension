@@ -34,11 +34,11 @@ export const Sidebar: React.FC<SidebarProps> = ({
 }) => {
   const navItems = [
     { id: 'dashboard' as ActivePage, label: 'Dashboard', icon: <LayoutDashboard className="w-4 h-4" /> },
-    { id: 'encrypt' as ActivePage, label: 'Encrypt Text', icon: <Lock className="w-4 h-4" /> },
-    { id: 'decrypt' as ActivePage, label: 'Decrypt Text', icon: <Unlock className="w-4 h-4" /> },
+    { id: 'encrypt' as ActivePage, label: 'Encrypt Files', icon: <Lock className="w-4 h-4" /> },
+    { id: 'decrypt' as ActivePage, label: 'Decrypt Files', icon: <Unlock className="w-4 h-4" /> },
     {
       id: 'history' as ActivePage,
-      label: 'Encryption History',
+      label: 'File History',
       icon: <History className="w-4 h-4" />,
       badge: historyCount > 0 ? historyCount : undefined,
     },
@@ -59,7 +59,7 @@ export const Sidebar: React.FC<SidebarProps> = ({
               {APP_NAME}
             </h1>
             <p className="text-[11px] text-[#647067] dark:text-[#A1AAA4]">
-              Encryption Extension
+              File Encryption Extension
             </p>
           </div>
         </div>

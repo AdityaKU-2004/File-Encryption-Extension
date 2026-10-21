@@ -12,9 +12,10 @@ import {
   CheckCircle2,
   AlertCircle,
   Shield,
-  Info,
+  FileCheck,
 } from 'lucide-react';
-import { HistoryEntry } from '../../types/history';
+import { FileHistoryEntry } from '../../types/history';
+import { formatFileSize } from '../../utils/fileSize';
 import { formatTimestamp } from '../../utils/formatters';
 import { Button } from '../common/Button';
 import { ConfirmDialog } from '../common/ConfirmDialog';
@@ -23,7 +24,7 @@ import { GlassCard } from '../common/GlassCard';
 import { IconButton } from '../common/IconButton';
 
 export interface HistoryListProps {
-  entries: HistoryEntry[];
+  entries: FileHistoryEntry[];
   onClear: () => void;
   onRemoveEntry: (id: string) => void;
   onLoadDemo?: () => void;
@@ -44,10 +45,10 @@ export const HistoryList: React.FC<HistoryListProps> = ({
       <div className="flex flex-wrap items-center justify-between gap-3">
         <div>
           <h2 className="text-xl sm:text-2xl font-bold tracking-tight text-[#17251B] dark:text-[#F8FAFC]">
-            Encryption History
+            File History
           </h2>
           <p className="text-sm text-[#647067] dark:text-[#A1AAA4] mt-1">
-            Audit log of cryptographic operations stored strictly in temporary session memory.
+            Privacy-preserving audit log of file cryptographic operations in this session.
           </p>
         </div>
 
@@ -68,21 +69,21 @@ export const HistoryList: React.FC<HistoryListProps> = ({
         <Shield className="w-4 h-4 text-emerald-600 dark:text-emerald-400 shrink-0 mt-0.5" />
         <div className="space-y-1">
           <p className="font-semibold text-emerald-800 dark:text-emerald-300">
-            Strict Privacy-Preserving Architecture
+            Strict Zero-Persistence Privacy Guarantee
           </p>
           <p className="text-[#647067] dark:text-[#A1AAA4] leading-relaxed">
-            Plaintext, passwords, ciphertexts, and decrypted data are never stored in history. Only operation type, timestamp, character count, and algorithm metadata are retained in volatile RAM during your browser session.
+            Plaintext file contents, decrypted data, and passwords are never persisted to disk or browser storage. Only operational metadata (filename, timestamp, size, and status) is retained in volatile memory during your active browser session.
           </p>
         </div>
       </div>
 
-      {/* List or Empty State */}
+      {/* History List or Empty State */}
       {entries.length === 0 ? (
         <EmptyState
           icon={<Clock className="w-6 h-6" />}
-          title="No encryption activity yet."
-          description="Your recent activity will appear here when enabled during this session. Plaintext and passwords are never recorded."
-          actionLabel="Encrypt Your First Message"
+          title="No file encryption activity yet."
+          description="Your recent file operations will appear here when enabled during this session. File contents and passwords are never recorded."
+          actionLabel="Encrypt Your First File"
           onAction={onNavigateToEncrypt}
           secondaryActionLabel={onLoadDemo ? 'Load Demo Entries' : undefined}
           onSecondaryAction={onLoadDemo}
@@ -121,8 +122,8 @@ export const HistoryList: React.FC<HistoryListProps> = ({
 
                     <div className="min-w-0 space-y-1">
                       <div className="flex items-center gap-2">
-                        <span className="text-sm font-semibold capitalize text-[#17251B] dark:text-[#F8FAFC]">
-                          {entry.operation} Text
+                        <span className="text-sm font-semibold text-[#17251B] dark:text-[#F8FAFC] truncate">
+                          {entry.filename}
                         </span>
                         <span
                           className={`text-[11px] font-medium flex items-center gap-1 ${
@@ -133,7 +134,8 @@ export const HistoryList: React.FC<HistoryListProps> = ({
                         >
                           {isSuccess ? (
                             <>
-                              <CheckCircle2 className="w-3 h-3" /> Success
+                              <CheckCircle2 className="w-3 h-3" />
+                              {isEncrypt ? 'Encrypted' : 'Decrypted'}
                             </>
                           ) : (
                             <>
@@ -148,9 +150,9 @@ export const HistoryList: React.FC<HistoryListProps> = ({
                         <span aria-hidden="true">·</span>
                         <span>{entry.algorithm}</span>
                         <span aria-hidden="true">·</span>
-                        <span>{entry.characterCount.toLocaleString()} chars processed</span>
+                        <span className="font-mono">{formatFileSize(entry.fileSize)}</span>
                         <span aria-hidden="true">·</span>
-                        <span>{entry.executionTimeMs}ms</span>
+                        <span className="font-mono">{entry.executionTimeMs}ms</span>
                       </div>
 
                       {entry.errorMessage && (
@@ -181,8 +183,8 @@ export const HistoryList: React.FC<HistoryListProps> = ({
         isOpen={showClearConfirm}
         onClose={() => setShowClearConfirm(false)}
         onConfirm={onClear}
-        title="Clear Operation History"
-        message="Are you sure you want to clear your current session operation log? This will delete all recorded metadata from memory."
+        title="Clear File History"
+        message="Are you sure you want to clear your current session file history? All operational logs will be permanently removed from memory."
         confirmLabel="Clear Log"
         isDestructive
       />

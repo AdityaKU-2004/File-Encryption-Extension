@@ -53,11 +53,11 @@ export const MobileNav: React.FC<MobileNavProps> = ({
 
   const navItems = [
     { id: 'dashboard' as ActivePage, label: 'Dashboard', icon: <LayoutDashboard className="w-4 h-4" /> },
-    { id: 'encrypt' as ActivePage, label: 'Encrypt Text', icon: <Lock className="w-4 h-4" /> },
-    { id: 'decrypt' as ActivePage, label: 'Decrypt Text', icon: <Unlock className="w-4 h-4" /> },
+    { id: 'encrypt' as ActivePage, label: 'Encrypt Files', icon: <Lock className="w-4 h-4" /> },
+    { id: 'decrypt' as ActivePage, label: 'Decrypt Files', icon: <Unlock className="w-4 h-4" /> },
     {
       id: 'history' as ActivePage,
-      label: 'Encryption History',
+      label: 'File History',
       icon: <History className="w-4 h-4" />,
       badge: historyCount > 0 ? historyCount : undefined,
     },

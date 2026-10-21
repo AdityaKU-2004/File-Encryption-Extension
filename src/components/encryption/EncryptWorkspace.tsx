@@ -3,7 +3,7 @@
  * SPDX-License-Identifier: Apache-2.0
  */
 
-import React, { useState } from 'react';
+import React, { useRef, useState } from 'react';
 import {
   Lock,
   ChevronDown,
@@ -12,23 +12,29 @@ import {
   Sliders,
   ShieldCheck,
   AlertCircle,
+  Download,
+  CheckCircle2,
 } from 'lucide-react';
-import { ALLOWED_ITERATION_OPTIONS } from '../../config/encryptionConfig';
-import { encryptionService } from '../../services/encryptionService';
+import { ALLOWED_ITERATION_OPTIONS, FILE_EXTENSION, RECOMMENDED_MAX_FILE_SIZE } from '../../config/encryptionConfig';
+import { useFileSelection } from '../../hooks/useFileSelection';
+import { encryptFile } from '../../services/fileEncryptionService';
 import { calculatePasswordStrength } from '../../services/passwordService';
-import { HistoryEntry } from '../../types/history';
-import { readFromClipboard } from '../../utils/clipboard';
+import { FileHistoryEntry } from '../../types/history';
+import { downloadBlob } from '../../utils/download';
+import { formatFileSize } from '../../utils/fileSize';
+import { getEncryptedFilename } from '../../utils/filename';
 import { Button } from '../common/Button';
 import { GlassCard } from '../common/GlassCard';
 import { Modal } from '../common/Modal';
-import { Textarea } from '../common/Textarea';
+import { BatchProgress } from '../files/BatchProgress';
+import { FileDropZone } from '../files/FileDropZone';
+import { FileList } from '../files/FileList';
 import { PasswordGenerator } from '../password/PasswordGenerator';
 import { PasswordInput } from '../password/PasswordInput';
 import { PasswordStrength } from '../password/PasswordStrength';
-import { EncryptionOutput } from './EncryptionOutput';
 
 export interface EncryptWorkspaceProps {
-  onRecordHistory?: (entry: Omit<HistoryEntry, 'id'>) => void;
+  onRecordHistory?: (entry: Omit<FileHistoryEntry, 'id'>) => void;
   onNotify?: (message: string, type?: 'success' | 'error' | 'info') => void;
   defaultIterations?: number;
 }
@@ -38,8 +44,17 @@ export const EncryptWorkspace: React.FC<EncryptWorkspaceProps> = ({
   onNotify,
   defaultIterations = 100_000,
 }) => {
-  // Ephemeral in-memory state only - never written to persistent storage
-  const [plaintext, setPlaintext] = useState('');
+  const {
+    selectedFiles,
+    addFiles,
+    removeFile,
+    clearAllFiles,
+    updateFileStatus,
+    hasFiles,
+    totalSizeBytes,
+  } = useFileSelection('encrypt');
+
+  // Password state
   const [password, setPassword] = useState('');
   const [confirmPassword, setConfirmPassword] = useState('');
   const [requireConfirm, setRequireConfirm] = useState(false);
@@ -52,41 +67,19 @@ export const EncryptWorkspace: React.FC<EncryptWorkspaceProps> = ({
   const [showGeneratorModal, setShowGeneratorModal] = useState(false);
 
   // Execution state
-  const [isEncrypting, setIsEncrypting] = useState(false);
-  const [encryptionResult, setEncryptionResult] = useState<{
-    encryptedText: string;
-    executionTimeMs: number;
-    algorithm: string;
-  } | null>(null);
+  const [isProcessing, setIsProcessing] = useState(false);
+  const [completedCount, setCompletedCount] = useState(0);
+  const [failedCount, setFailedCount] = useState(0);
+  const [processedBytes, setProcessedBytes] = useState(0);
 
   // Validation errors
-  const [plaintextError, setPlaintextError] = useState<string | null>(null);
   const [passwordError, setPasswordError] = useState<string | null>(null);
   const [generalError, setGeneralError] = useState<string | null>(null);
 
+  // Abort controller ref for batch cancellation
+  const abortControllerRef = useRef<AbortController | null>(null);
+
   const passwordStrength = calculatePasswordStrength(password);
-
-  const handlePastePlaintext = async () => {
-    const res = await readFromClipboard();
-    if (res.success && res.text) {
-      setPlaintext(res.text);
-      setPlaintextError(null);
-      onNotify?.('Text pasted from clipboard', 'info');
-    } else if (res.error) {
-      onNotify?.(res.error, 'error');
-    }
-  };
-
-  const handleClearPlaintext = () => {
-    setPlaintext('');
-    setPlaintextError(null);
-  };
-
-  const handleClearPassword = () => {
-    setPassword('');
-    setConfirmPassword('');
-    setPasswordError(null);
-  };
 
   const handleApplyGeneratedPassword = (newPass: string) => {
     setPassword(newPass);
@@ -98,121 +91,204 @@ export const EncryptWorkspace: React.FC<EncryptWorkspaceProps> = ({
     onNotify?.('Cryptographic password applied to workspace', 'success');
   };
 
-  const handleEncrypt = async (e: React.FormEvent) => {
+  const handleEncryptAll = async (e: React.FormEvent) => {
     e.preventDefault();
-    setPlaintextError(null);
     setPasswordError(null);
     setGeneralError(null);
 
-    // Validation
-    let hasError = false;
-    if (!plaintext.trim()) {
-      setPlaintextError('Please enter text to encrypt.');
-      hasError = true;
+    if (!hasFiles) {
+      setGeneralError('Please select at least one file to encrypt.');
+      return;
     }
 
     if (!password) {
       setPasswordError('Password is required for encryption.');
-      hasError = true;
-    } else if (password.length < 8) {
+      return;
+    }
+    if (password.length < 8) {
       setPasswordError('Password must be at least 8 characters long.');
-      hasError = true;
+      return;
     }
 
     if (requireConfirm && password !== confirmPassword) {
       setPasswordError('Passwords do not match. Please verify.');
-      hasError = true;
+      return;
     }
 
-    if (hasError) return;
+    setIsProcessing(true);
+    setCompletedCount(0);
+    setFailedCount(0);
+    setProcessedBytes(0);
 
-    setIsEncrypting(true);
+    const abortController = new AbortController();
+    abortControllerRef.current = abortController;
 
-    try {
-      const result = await encryptionService.encrypt({
-        plaintext,
-        password,
-        iterations,
+    let successfulFiles = 0;
+    let failedFiles = 0;
+    let accumulatedBytes = 0;
+
+    for (const item of selectedFiles) {
+      if (abortController.signal.aborted) {
+        updateFileStatus(item.id, { status: 'cancelled' });
+        continue;
+      }
+
+      updateFileStatus(item.id, {
+        status: 'encrypting',
+        progress: 0,
+        processedBytes: 0,
+        errorMessage: undefined,
       });
 
-      if (result.success) {
-        setEncryptionResult({
-          encryptedText: result.encryptedText,
-          executionTimeMs: result.executionTimeMs,
-          algorithm: 'AES-256-GCM',
+      try {
+        const result = await encryptFile({
+          file: item.file,
+          password,
+          iterations,
+          signal: abortController.signal,
+          onProgress: (pBytes) => {
+            updateFileStatus(item.id, {
+              processedBytes: pBytes,
+              progress: Math.round((pBytes / item.size) * 100),
+            });
+            setProcessedBytes(accumulatedBytes + pBytes);
+          },
         });
 
-        // Record strictly non-sensitive operational metadata
-        onRecordHistory?.({
-          operation: 'encrypt',
-          status: 'success',
-          timestamp: Date.now(),
-          characterCount: plaintext.length,
-          executionTimeMs: result.executionTimeMs,
-          algorithm: 'AES-256-GCM',
-        });
+        if (result.success && result.encryptedBlob) {
+          successfulFiles++;
+          setCompletedCount(successfulFiles);
+          accumulatedBytes += item.size;
+          setProcessedBytes(accumulatedBytes);
 
-        onNotify?.('Message successfully encrypted locally with AES-256-GCM', 'success');
-      } else {
-        setGeneralError(result.error || 'Encryption failed.');
-        onRecordHistory?.({
-          operation: 'encrypt',
-          status: 'failure',
-          timestamp: Date.now(),
-          characterCount: plaintext.length,
-          executionTimeMs: result.executionTimeMs,
-          algorithm: 'AES-256-GCM',
-          errorMessage: result.error,
+          updateFileStatus(item.id, {
+            status: 'completed',
+            progress: 100,
+            processedBytes: item.size,
+            encryptedBlob: result.encryptedBlob,
+            executionTimeMs: result.executionTimeMs,
+          });
+
+          onRecordHistory?.({
+            filename: item.name,
+            operation: 'encrypt',
+            status: 'success',
+            timestamp: Date.now(),
+            fileSize: item.size,
+            executionTimeMs: result.executionTimeMs,
+            algorithm: 'AES-256-GCM',
+          });
+        } else {
+          failedFiles++;
+          setFailedCount(failedFiles);
+
+          updateFileStatus(item.id, {
+            status: 'failed',
+            errorMessage: result.error || 'Encryption failed.',
+          });
+
+          onRecordHistory?.({
+            filename: item.name,
+            operation: 'encrypt',
+            status: 'failure',
+            timestamp: Date.now(),
+            fileSize: item.size,
+            executionTimeMs: result.executionTimeMs,
+            algorithm: 'AES-256-GCM',
+            errorMessage: result.error,
+          });
+        }
+      } catch (err) {
+        failedFiles++;
+        setFailedCount(failedFiles);
+        updateFileStatus(item.id, {
+          status: 'failed',
+          errorMessage: err instanceof Error ? err.message : 'Unexpected encryption error.',
         });
       }
-    } catch {
-      setGeneralError('An unexpected error occurred during encryption.');
-    } finally {
-      setIsEncrypting(false);
+    }
+
+    setIsProcessing(false);
+    abortControllerRef.current = null;
+
+    if (successfulFiles > 0) {
+      onNotify?.(
+        `Successfully encrypted ${successfulFiles} file${successfulFiles === 1 ? '' : 's'} with AES-256-GCM`,
+        'success'
+      );
     }
   };
 
-  const handleResetOutput = () => {
-    setEncryptionResult(null);
-    setGeneralError(null);
+  const handleCancelBatch = () => {
+    if (abortControllerRef.current) {
+      abortControllerRef.current.abort();
+      onNotify?.('Encryption batch cancelled by user', 'info');
+    }
   };
+
+  const handleDownloadAllEncrypted = () => {
+    const completedItems = selectedFiles.filter((f) => f.status === 'completed' && f.encryptedBlob);
+    for (const item of completedItems) {
+      if (item.encryptedBlob) {
+        downloadBlob(item.encryptedBlob, getEncryptedFilename(item.name));
+      }
+    }
+    onNotify?.(`Triggered download for ${completedItems.length} encrypted files`, 'success');
+  };
+
+  const completedEncryptedCount = selectedFiles.filter(
+    (f) => f.status === 'completed' && f.encryptedBlob
+  ).length;
 
   return (
     <div className="space-y-6">
-      {/* Workspace Page Header */}
+      {/* Page Header */}
       <div>
         <h2 className="text-xl sm:text-2xl font-bold tracking-tight text-[#17251B] dark:text-[#F8FAFC]">
-          Encrypt Text
+          Encrypt Files
         </h2>
         <p className="text-sm text-[#647067] dark:text-[#A1AAA4] mt-1">
-          Protect your message with password-based encryption using authenticated AES-256-GCM.
+          Select the files you want to protect. All files are encrypted locally in your browser with AES-256-GCM.
         </p>
       </div>
 
-      <form onSubmit={handleEncrypt} className="space-y-6">
-        {/* Card 1: Text Input */}
-        <GlassCard className="p-5 sm:p-6 space-y-3">
-          <Textarea
-            label="Plaintext Input"
-            placeholder="Enter the text you want to encrypt..."
-            value={plaintext}
-            onChange={(e) => {
-              setPlaintext(e.target.value);
-              if (plaintextError) setPlaintextError(null);
-            }}
-            onClear={handleClearPlaintext}
-            onPasteClipboard={handlePastePlaintext}
-            error={plaintextError || undefined}
-            rows={5}
-            helperText="Your text remains strictly in local memory and is never logged or transmitted."
+      <form onSubmit={handleEncryptAll} className="space-y-6">
+        {/* A. File Selection Area */}
+        <GlassCard className="p-5 sm:p-6 space-y-4">
+          <FileDropZone
+            onFilesSelected={addFiles}
+            title="Drop your files here"
+            subtitle="or browse your device"
+            buttonLabel="Select Files"
+            disabled={isProcessing}
+          />
+
+          {/* Large file advisory if selected size exceeds 1.5GB */}
+          {totalSizeBytes > RECOMMENDED_MAX_FILE_SIZE && (
+            <div className="p-3 rounded-lg border border-amber-500/30 bg-amber-50/60 dark:bg-amber-950/20 text-xs text-amber-800 dark:text-amber-300 flex items-start gap-2">
+              <AlertCircle className="w-4 h-4 shrink-0 mt-0.5" />
+              <span>
+                Total batch size is large ({formatFileSize(totalSizeBytes)}). In-browser memory is limited by your browser environment.
+              </span>
+            </div>
+          )}
+
+          {/* Selected File List */}
+          <FileList
+            files={selectedFiles}
+            mode="encrypt"
+            onRemove={removeFile}
+            onClearAll={clearAllFiles}
+            isProcessing={isProcessing}
+            onNotify={onNotify}
           />
         </GlassCard>
 
-        {/* Card 2: Password & Key Settings */}
+        {/* B. Password & Key Derivation Card */}
         <GlassCard className="p-5 sm:p-6 space-y-4">
           <div className="flex flex-wrap items-center justify-between gap-2 pb-2 border-b border-[#DCE8DE] dark:border-emerald-500/15">
             <span className="text-xs font-semibold uppercase tracking-wider text-[#17251B] dark:text-[#F8FAFC]">
-              Encryption Key & Password
+              Encryption Password
             </span>
             <Button
               type="button"
@@ -220,6 +296,7 @@ export const EncryptWorkspace: React.FC<EncryptWorkspaceProps> = ({
               size="sm"
               leftIcon={<Sparkles className="w-3.5 h-3.5" />}
               onClick={() => setShowGeneratorModal(true)}
+              disabled={isProcessing}
             >
               Generate Strong Password
             </Button>
@@ -234,8 +311,9 @@ export const EncryptWorkspace: React.FC<EncryptWorkspaceProps> = ({
                 setPassword(e.target.value);
                 if (passwordError) setPasswordError(null);
               }}
-              onClear={handleClearPassword}
+              onClear={() => setPassword('')}
               error={passwordError || undefined}
+              disabled={isProcessing}
             />
 
             {requireConfirm ? (
@@ -250,6 +328,7 @@ export const EncryptWorkspace: React.FC<EncryptWorkspaceProps> = ({
                     ? 'Passwords do not match'
                     : undefined
                 }
+                disabled={isProcessing}
               />
             ) : (
               <div className="flex flex-col justify-end pb-1.5">
@@ -267,7 +346,7 @@ export const EncryptWorkspace: React.FC<EncryptWorkspaceProps> = ({
           {password && <PasswordStrength strength={passwordStrength} />}
         </GlassCard>
 
-        {/* Card 3: Advanced Cryptographic Parameters (Collapsible) */}
+        {/* C. Advanced Options */}
         <GlassCard className="p-4 sm:p-5">
           <button
             type="button"
@@ -277,7 +356,7 @@ export const EncryptWorkspace: React.FC<EncryptWorkspaceProps> = ({
             <div className="flex items-center gap-2">
               <Sliders className="w-4 h-4 text-emerald-600 dark:text-emerald-400" />
               <span className="text-xs font-semibold uppercase tracking-wider text-[#17251B] dark:text-[#F8FAFC]">
-                Advanced Cryptographic Options
+                Advanced Encryption Options
               </span>
             </div>
             {showAdvanced ? (
@@ -291,44 +370,39 @@ export const EncryptWorkspace: React.FC<EncryptWorkspaceProps> = ({
             <div className="pt-4 mt-3 border-t border-[#DCE8DE] dark:border-emerald-500/15 space-y-4 text-xs">
               <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
                 <div className="p-3 rounded-lg bg-neutral-50 dark:bg-[#0B100D] border border-[#DCE8DE] dark:border-emerald-500/15">
-                  <span className="text-[#647067] dark:text-[#A1AAA4] block text-[11px]">
-                    Cipher Algorithm
-                  </span>
+                  <span className="text-[#647067] dark:text-[#A1AAA4] block text-[11px]">Algorithm</span>
                   <span className="font-mono font-medium text-[#17251B] dark:text-emerald-400 mt-0.5 block">
                     AES-256-GCM
                   </span>
                 </div>
 
                 <div className="p-3 rounded-lg bg-neutral-50 dark:bg-[#0B100D] border border-[#DCE8DE] dark:border-emerald-500/15">
-                  <span className="text-[#647067] dark:text-[#A1AAA4] block text-[11px]">
-                    Key Derivation (KDF)
-                  </span>
+                  <span className="text-[#647067] dark:text-[#A1AAA4] block text-[11px]">Key Derivation</span>
                   <span className="font-mono font-medium text-[#17251B] dark:text-emerald-400 mt-0.5 block">
                     PBKDF2-HMAC-SHA256
                   </span>
                 </div>
 
                 <div className="p-3 rounded-lg bg-neutral-50 dark:bg-[#0B100D] border border-[#DCE8DE] dark:border-emerald-500/15">
-                  <span className="text-[#647067] dark:text-[#A1AAA4] block text-[11px]">
-                    Output Container
-                  </span>
+                  <span className="text-[#647067] dark:text-[#A1AAA4] block text-[11px]">Output Format</span>
                   <span className="font-mono font-medium text-[#17251B] dark:text-emerald-400 mt-0.5 block">
-                    SecureVault Envelope v1
+                    SecureVault ({FILE_EXTENSION})
                   </span>
                 </div>
               </div>
 
               <div>
                 <label
-                  htmlFor="kdf-iterations-select"
+                  htmlFor="encrypt-iterations-select"
                   className="block font-medium text-[#17251B] dark:text-[#F8FAFC] mb-1.5"
                 >
                   PBKDF2 Iteration Count:
                 </label>
                 <select
-                  id="kdf-iterations-select"
+                  id="encrypt-iterations-select"
                   value={iterations}
                   onChange={(e) => setIterations(Number(e.target.value))}
+                  disabled={isProcessing}
                   className="w-full text-xs rounded-lg border py-2 px-3 bg-white text-[#17251B] border-[#DCE8DE] focus:border-emerald-600 focus:outline-none dark:bg-[#0B100D] dark:text-[#F8FAFC] dark:border-emerald-500/20 dark:focus:border-emerald-500"
                 >
                   {ALLOWED_ITERATION_OPTIONS.map((opt) => (
@@ -345,6 +419,19 @@ export const EncryptWorkspace: React.FC<EncryptWorkspaceProps> = ({
           )}
         </GlassCard>
 
+        {/* Batch Progress Bar */}
+        {isProcessing && (
+          <BatchProgress
+            totalFiles={selectedFiles.length}
+            completedFiles={completedCount}
+            failedFiles={failedCount}
+            processedBytes={processedBytes}
+            totalBytes={totalSizeBytes}
+            isProcessing={isProcessing}
+            onCancel={handleCancelBatch}
+          />
+        )}
+
         {generalError && (
           <div className="p-3.5 rounded-lg border border-red-500/30 bg-red-50 text-red-700 dark:bg-red-950/40 dark:text-red-300 text-xs flex items-center gap-2">
             <AlertCircle className="w-4 h-4 shrink-0 text-red-500" />
@@ -352,35 +439,42 @@ export const EncryptWorkspace: React.FC<EncryptWorkspaceProps> = ({
           </div>
         )}
 
-        {/* Primary Action Button */}
-        <div className="flex flex-wrap items-center justify-between gap-3">
+        {/* Action Buttons */}
+        <div className="flex flex-wrap items-center justify-between gap-3 pt-2">
           <div className="text-xs text-[#647067] dark:text-[#A1AAA4] flex items-center gap-1.5">
             <ShieldCheck className="w-3.5 h-3.5 text-emerald-600 dark:text-emerald-400" />
-            <span>Encrypted locally in browser memory</span>
+            <span>Encrypted locally in browser memory · Zero server uploads</span>
           </div>
 
-          <Button
-            type="submit"
-            size="lg"
-            isLoading={isEncrypting}
-            leftIcon={<Lock className="w-4 h-4" />}
-            disabled={!plaintext.trim() || !password}
-          >
-            {isEncrypting ? 'Encrypting with AES-GCM...' : 'Encrypt Text'}
-          </Button>
+          <div className="flex items-center gap-2">
+            {completedEncryptedCount > 1 && (
+              <Button
+                type="button"
+                variant="outline"
+                size="md"
+                leftIcon={<Download className="w-4 h-4" />}
+                onClick={handleDownloadAllEncrypted}
+              >
+                Download All ({completedEncryptedCount})
+              </Button>
+            )}
+
+            <Button
+              type="submit"
+              size="lg"
+              isLoading={isProcessing}
+              leftIcon={<Lock className="w-4 h-4" />}
+              disabled={!hasFiles || !password}
+            >
+              {isProcessing
+                ? 'Encrypting Files...'
+                : hasFiles
+                ? `Encrypt ${selectedFiles.length} File${selectedFiles.length === 1 ? '' : 's'} (${formatFileSize(totalSizeBytes)})`
+                : 'Encrypt Files'}
+            </Button>
+          </div>
         </div>
       </form>
-
-      {/* Result Output Card */}
-      {encryptionResult && (
-        <EncryptionOutput
-          encryptedText={encryptionResult.encryptedText}
-          executionTimeMs={encryptionResult.executionTimeMs}
-          algorithm={encryptionResult.algorithm}
-          onClear={handleResetOutput}
-          onNotify={(msg) => onNotify?.(msg, 'success')}
-        />
-      )}
 
       {/* Password Generator Modal */}
       <Modal

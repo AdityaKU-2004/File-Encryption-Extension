@@ -23,15 +23,23 @@ import { Sidebar } from './Sidebar';
 export const AppShell: React.FC = () => {
   const { theme, toggleTheme, setTheme } = useTheme();
   const { toasts, showToast, dismissToast } = useToast();
-  const { history, addEntry, clearHistory, removeEntry, loadDemoData } = useHistory();
+  const { history, addEntry, clearHistory, removeEntry, loadDemoData, stats } = useHistory();
 
   const [activePage, setActivePage] = useState<ActivePage>('dashboard');
   const [layoutMode, setLayoutMode] = useState<LayoutMode>('dashboard');
   const [isMobileNavOpen, setIsMobileNavOpen] = useState(false);
   const [defaultIterations, setDefaultIterations] = useState(100_000);
+  const [recordHistory, setRecordHistory] = useState(true);
+  const [autoDownload, setAutoDownload] = useState(false);
 
   const toggleLayoutMode = () => {
     setLayoutMode((prev) => (prev === 'dashboard' ? 'popup' : 'dashboard'));
+  };
+
+  const handleRecordHistory = (entry: Parameters<typeof addEntry>[0]) => {
+    if (recordHistory) {
+      addEntry(entry);
+    }
   };
 
   // If Popup Mode is active, render the compact extension view
@@ -42,7 +50,7 @@ export const AppShell: React.FC = () => {
           theme={theme}
           onToggleTheme={toggleTheme}
           onSwitchToDashboard={() => setLayoutMode('dashboard')}
-          onRecordHistory={addEntry}
+          onRecordHistory={handleRecordHistory}
           onNotify={showToast}
         />
         <ToastContainer toasts={toasts} onDismiss={dismissToast} />
@@ -64,7 +72,7 @@ export const AppShell: React.FC = () => {
         />
       </div>
 
-      {/* Mobile Drawer */}
+      {/* Mobile Navigation Drawer */}
       <MobileNav
         isOpen={isMobileNavOpen}
         onClose={() => setIsMobileNavOpen(false)}
@@ -91,6 +99,7 @@ export const AppShell: React.FC = () => {
             <DashboardPage
               onNavigate={setActivePage}
               recentActivity={history}
+              stats={stats}
               onClearHistory={clearHistory}
               onLoadDemoHistory={loadDemoData}
             />
@@ -98,14 +107,17 @@ export const AppShell: React.FC = () => {
 
           {activePage === 'encrypt' && (
             <EncryptWorkspace
-              onRecordHistory={addEntry}
+              onRecordHistory={handleRecordHistory}
               onNotify={showToast}
               defaultIterations={defaultIterations}
             />
           )}
 
           {activePage === 'decrypt' && (
-            <DecryptWorkspace onRecordHistory={addEntry} onNotify={showToast} />
+            <DecryptWorkspace
+              onRecordHistory={handleRecordHistory}
+              onNotify={showToast}
+            />
           )}
 
           {activePage === 'history' && (
@@ -126,6 +138,10 @@ export const AppShell: React.FC = () => {
               onLayoutModeChange={setLayoutMode}
               defaultIterations={defaultIterations}
               onDefaultIterationsChange={setDefaultIterations}
+              recordHistory={recordHistory}
+              onRecordHistoryChange={setRecordHistory}
+              autoDownload={autoDownload}
+              onAutoDownloadChange={setAutoDownload}
               onClearHistory={clearHistory}
               onNotify={showToast}
               onNavigateToAbout={() => setActivePage('about')}

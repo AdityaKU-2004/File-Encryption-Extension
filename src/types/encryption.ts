@@ -3,6 +3,8 @@
  * SPDX-License-Identifier: Apache-2.0
  */
 
+import { FileMetadataPayload } from './file';
+
 export type SupportedAlgorithm = 'AES-GCM';
 export type SupportedKDF = 'PBKDF2';
 export type SupportedHash = 'SHA-256';
@@ -13,23 +15,20 @@ export interface CryptoConfig {
   kdf: SupportedKDF;
   hash: SupportedHash;
   iterations: number;
-  saltLength: number; // in bytes (default 16)
-  ivLength: number;   // in bytes (default 12 for AES-GCM)
+  saltLength: number;
+  ivLength: number;
 }
 
-/**
- * Standard SecureVault envelope structure for serialized encrypted messages.
- */
 export interface SecureVaultEnvelope {
   format: 'SECUREVAULT';
   version: 1;
   algorithm: 'AES-256-GCM';
   kdf: 'PBKDF2-SHA256';
   iterations: number;
-  salt: string;       // Base64 encoded 16-byte random salt
-  iv: string;         // Base64 encoded 12-byte random IV
-  ciphertext: string; // Base64 encoded ciphertext + GCM auth tag
-  createdAt: string;  // ISO timestamp of encryption
+  salt: string;
+  iv: string;
+  ciphertext: string;
+  createdAt: string;
 }
 
 export interface EncryptionRequest {
@@ -64,8 +63,43 @@ export interface DecryptionResult {
   error?: string;
 }
 
+export interface FileEncryptionRequest {
+  file: File;
+  password: string;
+  iterations?: number;
+  onProgress?: (processedBytes: number, totalBytes: number) => void;
+  signal?: AbortSignal;
+}
+
+export interface FileEncryptionResult {
+  success: boolean;
+  encryptedBlob?: Blob;
+  encryptedFilename: string;
+  executionTimeMs: number;
+  originalSize: number;
+  encryptedSize: number;
+  error?: string;
+}
+
+export interface FileDecryptionRequest {
+  file: File;
+  password: string;
+  onProgress?: (processedBytes: number, totalBytes: number) => void;
+  signal?: AbortSignal;
+}
+
+export interface FileDecryptionResult {
+  success: boolean;
+  decryptedBlob?: Blob;
+  originalFilename: string;
+  originalMimeType: string;
+  originalSize: number;
+  executionTimeMs: number;
+  error?: string;
+}
+
 export interface PasswordStrengthResult {
-  score: number; // 0 to 4 (0: Very Weak, 1: Weak, 2: Fair, 3: Good, 4: Strong)
+  score: number;
   label: 'Very Weak' | 'Weak' | 'Fair' | 'Good' | 'Strong';
   entropyBits: number;
   hasLength: boolean;

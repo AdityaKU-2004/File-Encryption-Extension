@@ -8,13 +8,13 @@ import {
   ShieldCheck,
   Lock,
   Eye,
-  KeyRound,
-  FileCode2,
-  AlertTriangle,
   Globe,
   Terminal,
+  AlertTriangle,
+  HardDrive,
+  FileCheck2,
 } from 'lucide-react';
-import { APP_NAME, APP_TAGLINE, APP_VERSION } from '../config/encryptionConfig';
+import { APP_NAME, APP_TAGLINE, APP_VERSION, FILE_EXTENSION } from '../config/encryptionConfig';
 import { GlassCard } from '../components/common/GlassCard';
 
 export const AboutPage: React.FC = () => {
@@ -34,12 +34,12 @@ export const AboutPage: React.FC = () => {
         <div className="flex items-center gap-2.5 pb-2 border-b border-[#DCE8DE] dark:border-emerald-500/15">
           <ShieldCheck className="w-5 h-5 text-emerald-600 dark:text-emerald-400" />
           <h3 className="text-sm font-semibold uppercase tracking-wider text-[#17251B] dark:text-[#F8FAFC]">
-            Privacy-First Architecture
+            Privacy-First File Cryptography
           </h3>
         </div>
 
         <p className="text-sm text-[#647067] dark:text-[#A1AAA4] leading-relaxed">
-          {APP_NAME} is an offline-capable, client-side encryption utility engineered for browser extension environments (Chrome, Firefox, and Chromium variants). It empowers individuals to protect sensitive snippets, notes, and messages locally without relying on centralized third-party servers, accounts, or proprietary cloud algorithms.
+          {APP_NAME} is an offline-capable, cross-browser file encryption utility engineered for browser extension environments (Google Chrome, Mozilla Firefox, and Chromium-based browsers). It enables individuals to encrypt sensitive documents, videos, spreadsheets, presentations, archives, and arbitrary binary files directly within the local browser sandbox without uploading data to remote servers or third-party cloud infrastructure.
         </p>
 
         <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 pt-2">
@@ -48,7 +48,7 @@ export const AboutPage: React.FC = () => {
               <Lock className="w-3.5 h-3.5 text-emerald-500" /> Zero Telemetry
             </span>
             <p className="text-[11px] text-[#647067] dark:text-[#A1AAA4]">
-              No analytics scripts, tracking beacons, or external API endpoints are ever contacted.
+              No files, file contents, or usage telemetry are ever transmitted across networks.
             </p>
           </div>
 
@@ -57,16 +57,16 @@ export const AboutPage: React.FC = () => {
               <Eye className="w-3.5 h-3.5 text-emerald-500" /> Zero Persistence
             </span>
             <p className="text-[11px] text-[#647067] dark:text-[#A1AAA4]">
-              Passwords and raw plaintext remain strictly in volatile memory during your session.
+              Passwords and raw file buffers reside exclusively in memory during the operation.
             </p>
           </div>
 
           <div className="p-3.5 rounded-lg border border-[#DCE8DE] dark:border-emerald-500/15 bg-neutral-50 dark:bg-[#0B100D] space-y-1">
             <span className="font-semibold text-xs text-[#17251B] dark:text-[#F8FAFC] flex items-center gap-1.5">
-              <Globe className="w-3.5 h-3.5 text-emerald-500" /> Web Crypto Native
+              <FileCheck2 className="w-3.5 h-3.5 text-emerald-500" /> Byte-for-Byte Fidelity
             </span>
             <p className="text-[11px] text-[#647067] dark:text-[#A1AAA4]">
-              Executes using the browser's hardware-accelerated SubtleCrypto standard implementation.
+              Decryption restores the exact binary byte sequence and original filename.
             </p>
           </div>
         </div>
@@ -77,27 +77,27 @@ export const AboutPage: React.FC = () => {
         <div className="flex items-center gap-2.5 pb-2 border-b border-[#DCE8DE] dark:border-emerald-500/15">
           <Terminal className="w-5 h-5 text-emerald-600 dark:text-emerald-400" />
           <h3 className="text-sm font-semibold uppercase tracking-wider text-[#17251B] dark:text-[#F8FAFC]">
-            Cryptographic Protocol & Format Specification
+            Cryptographic Protocol & Binary Container Specification
           </h3>
         </div>
 
         <div className="space-y-3 text-xs text-[#647067] dark:text-[#A1AAA4] leading-relaxed">
           <p>
-            Messages encrypted with {APP_NAME} use authenticated symmetric encryption that guards against both eavesdropping and unauthorized tampering:
+            SecureVault files use a standardized binary container format (<code className="font-mono text-emerald-600 dark:text-emerald-400">{FILE_EXTENSION}</code>) designed for high integrity and tamper resistance:
           </p>
 
           <ul className="list-disc list-inside space-y-1.5 pl-1">
             <li>
-              <strong className="text-[#17251B] dark:text-[#F8FAFC]">Cipher:</strong> AES-GCM (Galois/Counter Mode) with 256-bit key length and 128-bit authentication tag.
+              <strong className="text-[#17251B] dark:text-[#F8FAFC]">Symmetric Cipher:</strong> AES-GCM (Galois/Counter Mode) with 256-bit key length and 128-bit authentication tags.
             </li>
             <li>
-              <strong className="text-[#17251B] dark:text-[#F8FAFC]">Key Derivation:</strong> PBKDF2-HMAC-SHA256 using 100,000+ iterations and a unique 128-bit cryptographically random salt per message.
+              <strong className="text-[#17251B] dark:text-[#F8FAFC]">Key Derivation:</strong> PBKDF2-HMAC-SHA256 with 100,000+ iterations and a unique 128-bit cryptographically random salt per file.
             </li>
             <li>
-              <strong className="text-[#17251B] dark:text-[#F8FAFC]">Initialization Vector (IV):</strong> Unique 96-bit random IV generated via <code className="font-mono text-emerald-600 dark:text-emerald-400">crypto.getRandomValues</code> for every encryption operation.
+              <strong className="text-[#17251B] dark:text-[#F8FAFC]">Separate Initialization Vectors:</strong> Dedicated 96-bit random IVs for metadata and file payload, ensuring zero nonce reuse.
             </li>
             <li>
-              <strong className="text-[#17251B] dark:text-[#F8FAFC]">Envelope Serialization:</strong> Serialized as a versioned Base64 envelope prefixed with <code className="font-mono text-emerald-600 dark:text-emerald-400">SECUREVAULT:v1:</code> containing JSON metadata for interoperability.
+              <strong className="text-[#17251B] dark:text-[#F8FAFC]">Authenticated Metadata:</strong> Original filenames, file sizes, and MIME types are encrypted and authenticated inside the container, preventing eavesdropping and tampering.
             </li>
           </ul>
         </div>
@@ -108,26 +108,20 @@ export const AboutPage: React.FC = () => {
         <div className="flex items-center gap-2.5 pb-2 border-b border-[#DCE8DE] dark:border-emerald-500/15">
           <AlertTriangle className="w-5 h-5 text-amber-500" />
           <h3 className="text-sm font-semibold uppercase tracking-wider text-[#17251B] dark:text-[#F8FAFC]">
-            Security Disclosures & Threat Model Limitations
+            Security Disclosures & Technical Limitations
           </h3>
         </div>
 
         <div className="space-y-2.5 text-xs text-[#647067] dark:text-[#A1AAA4] leading-relaxed">
-          <p>
-            To maintain transparency and informed trust, please note the operational boundaries of this tool:
-          </p>
           <ul className="list-disc list-inside space-y-1.5 pl-1">
             <li>
-              <strong>Plaintext Visibility:</strong> While plaintext is displayed on your monitor, anyone with physical or visual access to your screen may read it. Clear the screen when finished.
+              <strong>Browser Memory Constraints:</strong> Processing occurs in-browser. Operating systems and browsers typically limit single memory allocations to 1.5GB–2GB.
             </li>
             <li>
-              <strong>Host Environment Security:</strong> If your underlying operating system, browser, or device is compromised with malware or keyloggers, encryption cannot protect data entered into input fields.
+              <strong>No Password Recovery Backdoor:</strong> Decryption mathematically depends on the password. There is no recovery mechanism or master key. If a password is forgotten, ciphertext cannot be recovered.
             </li>
             <li>
-              <strong>Password Strength & Recovery:</strong> Decryption mathematically depends on the password. There is no backdoor, master key, or recovery mechanism. If a password is forgotten, ciphertext cannot be recovered.
-            </li>
-            <li>
-              <strong>Audit Status:</strong> SecureVault relies on the browser's native Web Crypto API standard primitives; however, no independent third-party code audit has been performed on this build.
+              <strong>Host Device Security:</strong> If the user's operating system or browser is infected with malware or spyware, files can be intercepted before encryption or after decryption.
             </li>
           </ul>
         </div>
@@ -137,7 +131,7 @@ export const AboutPage: React.FC = () => {
       <div className="text-center text-xs text-[#647067] dark:text-[#A1AAA4] py-2">
         <span>{APP_NAME} v{APP_VERSION}</span>
         <span aria-hidden="true" className="mx-2">·</span>
-        <span>Cross-Browser Web Crypto Extension</span>
+        <span>Cross-Browser File Encryption Extension</span>
       </div>
     </div>
   );
