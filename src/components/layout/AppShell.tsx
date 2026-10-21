@@ -17,16 +17,23 @@ import { HistoryList } from '../history/HistoryList';
 import { SettingsSection } from '../settings/SettingsSection';
 import { Header } from './Header';
 import { MobileNav } from './MobileNav';
+import { isExtensionEnvironment, openDashboardTab } from '../../extension/browser';
 import { PopupLayout } from './PopupLayout';
 import { Sidebar } from './Sidebar';
 
-export const AppShell: React.FC = () => {
+export interface AppShellProps {
+  initialLayoutMode?: LayoutMode;
+}
+
+export const AppShell: React.FC<AppShellProps> = ({
+  initialLayoutMode = 'dashboard',
+}) => {
   const { theme, toggleTheme, setTheme } = useTheme();
   const { toasts, showToast, dismissToast } = useToast();
   const { history, addEntry, clearHistory, removeEntry, loadDemoData, stats } = useHistory();
 
   const [activePage, setActivePage] = useState<ActivePage>('dashboard');
-  const [layoutMode, setLayoutMode] = useState<LayoutMode>('dashboard');
+  const [layoutMode, setLayoutMode] = useState<LayoutMode>(initialLayoutMode);
   const [isMobileNavOpen, setIsMobileNavOpen] = useState(false);
   const [defaultIterations, setDefaultIterations] = useState(100_000);
   const [recordHistory, setRecordHistory] = useState(true);
@@ -42,6 +49,13 @@ export const AppShell: React.FC = () => {
     }
   };
 
+  const handleSwitchToDashboard = () => {
+    if (isExtensionEnvironment()) {
+      openDashboardTab();
+    }
+    setLayoutMode('dashboard');
+  };
+
   // If Popup Mode is active, render the compact extension view
   if (layoutMode === 'popup') {
     return (
@@ -49,7 +63,7 @@ export const AppShell: React.FC = () => {
         <PopupLayout
           theme={theme}
           onToggleTheme={toggleTheme}
-          onSwitchToDashboard={() => setLayoutMode('dashboard')}
+          onSwitchToDashboard={handleSwitchToDashboard}
           onRecordHistory={handleRecordHistory}
           onNotify={showToast}
         />

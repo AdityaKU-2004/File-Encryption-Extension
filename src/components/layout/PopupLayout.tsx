@@ -42,6 +42,7 @@ export interface PopupLayoutProps {
   onSwitchToDashboard: () => void;
   onRecordHistory?: (entry: Omit<FileHistoryEntry, 'id'>) => void;
   onNotify?: (message: string, type?: 'success' | 'error' | 'info') => void;
+  isStandalonePopup?: boolean;
 }
 
 type PopupTab = 'encrypt' | 'decrypt' | 'generator' | 'settings';
@@ -52,6 +53,7 @@ export const PopupLayout: React.FC<PopupLayoutProps> = ({
   onSwitchToDashboard,
   onRecordHistory,
   onNotify,
+  isStandalonePopup = false,
 }) => {
   const [activeTab, setActiveTab] = useState<PopupTab>('encrypt');
 
@@ -223,12 +225,16 @@ export const PopupLayout: React.FC<PopupLayoutProps> = ({
     setIsDecrypting(false);
   };
 
-  return (
-    <div className="min-h-screen flex items-center justify-center p-3 sm:p-6 bg-neutral-200/50 dark:bg-neutral-950/40">
-      {/* 390px Popup Frame */}
-      <div className="w-full max-w-[400px] rounded-2xl border bg-white dark:bg-[#080B09] border-[#DCE8DE] dark:border-emerald-500/20 shadow-2xl overflow-hidden flex flex-col">
-        {/* 1. Header & Controls */}
-        <div className="flex items-center justify-between p-3.5 border-b border-[#DCE8DE] dark:border-emerald-500/15 bg-neutral-50/70 dark:bg-[#101612]/90">
+  const popupContent = (
+    <div
+      className={`w-full max-w-[400px] ${
+        isStandalonePopup
+          ? 'rounded-none border-0 shadow-none min-h-[520px]'
+          : 'rounded-2xl border border-[#DCE8DE] dark:border-emerald-500/20 shadow-2xl'
+      } bg-white dark:bg-[#080B09] overflow-hidden flex flex-col`}
+    >
+      {/* 1. Header & Controls */}
+      <div className="flex items-center justify-between p-3.5 border-b border-[#DCE8DE] dark:border-emerald-500/15 bg-neutral-50/70 dark:bg-[#101612]/90">
           <div className="flex items-center gap-2">
             <div className="p-1.5 rounded-lg bg-emerald-600 dark:bg-emerald-500 text-white dark:text-black">
               <Shield className="w-4 h-4" />
@@ -638,6 +644,15 @@ export const PopupLayout: React.FC<PopupLayoutProps> = ({
           </button>
         </div>
       </div>
+  );
+
+  if (isStandalonePopup) {
+    return popupContent;
+  }
+
+  return (
+    <div className="min-h-screen flex items-center justify-center p-3 sm:p-6 bg-neutral-200/50 dark:bg-neutral-950/40">
+      {popupContent}
     </div>
   );
 };
