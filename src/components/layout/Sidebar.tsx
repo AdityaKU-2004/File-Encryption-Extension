@@ -118,7 +118,7 @@ export const Sidebar: React.FC<SidebarProps> = ({
             <Shield className="w-3 h-3 shrink-0" />
             <span>100% Client-Side Privacy</span>
           </div>
-          <p className="text-[10px] text-[#647067] dark:text-[#64746B] mt-0.5 font-mono">
+          <p className="text-[10px] text-[#647067] dark:text-[#A1AAA4] mt-0.5 font-mono">
             SecureVault v{APP_VERSION}
           </p>
         </div>

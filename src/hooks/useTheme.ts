@@ -38,15 +38,19 @@ export function useTheme() {
     if (theme === 'dark') {
       root.classList.add('dark');
       root.classList.remove('light');
+      root.setAttribute('data-theme', 'dark');
       body.classList.add('dark');
       body.classList.remove('light');
+      body.setAttribute('data-theme', 'dark');
       body.style.backgroundColor = '#080B09';
       body.style.color = '#F8FAFC';
     } else {
       root.classList.add('light');
       root.classList.remove('dark');
+      root.setAttribute('data-theme', 'light');
       body.classList.add('light');
       body.classList.remove('dark');
+      body.setAttribute('data-theme', 'light');
       body.style.backgroundColor = '#F7FAF7';
       body.style.color = '#17251B';
     }

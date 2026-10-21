@@ -45,7 +45,7 @@ export const AppShell: React.FC = () => {
   // If Popup Mode is active, render the compact extension view
   if (layoutMode === 'popup') {
     return (
-      <div className="min-h-screen bg-[#080B09] text-[#F8FAFC]">
+      <div className="min-h-screen bg-[#F7FAF7] text-[#17251B] dark:bg-[#080B09] dark:text-[#F8FAFC] transition-colors duration-200">
         <PopupLayout
           theme={theme}
           onToggleTheme={toggleTheme}

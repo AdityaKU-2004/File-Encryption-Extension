@@ -1,5 +1,5 @@
 <!doctype html>
-<html lang="en">
+<html lang="en" class="dark" data-theme="dark">
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
@@ -12,8 +12,19 @@
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;500;600&family=Plus+Jakarta+Sans:wght@400;500;600;700&display=swap" rel="stylesheet">
+    <script>
+      (function() {
+        try {
+          var stored = localStorage.getItem('securevault_theme_pref');
+          var theme = stored === 'light' ? 'light' : 'dark';
+          document.documentElement.classList.remove('dark', 'light');
+          document.documentElement.classList.add(theme);
+          document.documentElement.setAttribute('data-theme', theme);
+        } catch (e) {}
+      })();
+    </script>
   </head>
-  <body class="bg-[#080B09] text-[#F8FAFC] antialiased selection:bg-emerald-500/30 selection:text-emerald-200">
+  <body class="dark bg-[#080B09] text-[#F8FAFC] antialiased selection:bg-emerald-500/30 selection:text-emerald-200">
     <div id="root"></div>
     <script type="module" src="/src/main.tsx"></script>
   </body>

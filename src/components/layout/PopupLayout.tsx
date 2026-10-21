@@ -224,7 +224,7 @@ export const PopupLayout: React.FC<PopupLayoutProps> = ({
   };
 
   return (
-    <div className="min-h-screen flex items-center justify-center p-3 sm:p-6 bg-neutral-950/40">
+    <div className="min-h-screen flex items-center justify-center p-3 sm:p-6 bg-neutral-200/50 dark:bg-neutral-950/40">
       {/* 390px Popup Frame */}
       <div className="w-full max-w-[400px] rounded-2xl border bg-white dark:bg-[#080B09] border-[#DCE8DE] dark:border-emerald-500/20 shadow-2xl overflow-hidden flex flex-col">
         {/* 1. Header & Controls */}

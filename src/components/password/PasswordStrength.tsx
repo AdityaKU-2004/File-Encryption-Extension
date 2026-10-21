@@ -125,7 +125,7 @@ export const PasswordStrength: React.FC<PasswordStrengthProps> = ({
         </div>
       )}
 
-      <p className="text-[11px] text-[#647067] dark:text-[#64746B] italic">
+      <p className="text-[11px] text-[#647067] dark:text-[#A1AAA4] italic">
         * Local heuristic estimate. Security also depends on avoiding reused or previously leaked passwords.
       </p>
     </div>

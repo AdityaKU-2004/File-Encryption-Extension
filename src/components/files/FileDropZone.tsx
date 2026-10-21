@@ -123,7 +123,7 @@ export const FileDropZone: React.FC<FileDropZoneProps> = ({
         {buttonLabel}
       </Button>
 
-      <div className="mt-4 text-[11px] text-[#647067] dark:text-[#64746B]">
+      <div className="mt-4 text-[11px] text-[#647067] dark:text-[#A1AAA4]">
         Supports all video, document, spreadsheet, image, audio, archive, and arbitrary binary files
       </div>
     </div>

@@ -92,8 +92,8 @@ export const SettingsSection: React.FC<SettingsSectionProps> = ({
                 onClick={() => onThemeChange('dark')}
                 className={`flex items-center justify-center gap-2 p-3 rounded-lg border text-xs font-medium transition-all cursor-pointer ${
                   theme === 'dark'
-                    ? 'bg-[#101612] text-white border-emerald-500 shadow-sm'
-                    : 'bg-white/50 text-[#647067] border-[#DCE8DE] hover:border-emerald-500/40'
+                    ? 'bg-[#101612] text-white border-emerald-500 shadow-sm dark:bg-[#16201A] dark:text-[#F8FAFC] dark:border-emerald-500 ring-1 ring-emerald-500/30'
+                    : 'bg-white/50 text-[#647067] border-[#DCE8DE] hover:border-emerald-500/40 dark:bg-[#101612]/60 dark:border-emerald-500/20 dark:text-[#A1AAA4] dark:hover:border-emerald-500/40 dark:hover:text-[#F8FAFC]'
                 }`}
               >
                 <Moon className="w-3.5 h-3.5 text-emerald-400" />
@@ -105,8 +105,8 @@ export const SettingsSection: React.FC<SettingsSectionProps> = ({
                 onClick={() => onThemeChange('light')}
                 className={`flex items-center justify-center gap-2 p-3 rounded-lg border text-xs font-medium transition-all cursor-pointer ${
                   theme === 'light'
-                    ? 'bg-white text-emerald-800 border-emerald-600 shadow-sm'
-                    : 'bg-neutral-100/50 text-[#647067] border-[#DCE8DE] hover:border-emerald-600/40'
+                    ? 'bg-white text-emerald-800 border-emerald-600 shadow-sm ring-1 ring-emerald-600/30 font-semibold'
+                    : 'bg-neutral-100/50 text-[#647067] border-[#DCE8DE] hover:border-emerald-600/40 dark:bg-[#101612]/60 dark:border-emerald-500/20 dark:text-[#A1AAA4] dark:hover:border-emerald-500/40 dark:hover:text-[#F8FAFC]'
                 }`}
               >
                 <Sun className="w-3.5 h-3.5 text-amber-500" />

@@ -1,5 +1,7 @@
 @import "tailwindcss";
 
+@custom-variant dark (&:where(.dark, .dark *, [data-theme="dark"], [data-theme="dark"] *));
+
 @layer base {
   :root {
     font-family: 'Plus Jakarta Sans', system-ui, -apple-system, sans-serif;
@@ -11,8 +13,17 @@
   }
 }
 
+/* Color Scheme & Global Native Controls */
+html.dark, :root.dark, :root[data-theme="dark"], body.dark {
+  color-scheme: dark;
+}
+
+html.light, :root.light, :root[data-theme="light"], body.light {
+  color-scheme: light;
+}
+
 /* Custom glassmorphism and theme styles */
-.dark {
+:root, .dark, [data-theme="dark"] {
   --bg-canvas: #080B09;
   --bg-surface: #101612;
   --bg-surface-glass: rgba(16, 22, 18, 0.75);
@@ -28,7 +39,7 @@
   --shadow-glass: 0 10px 30px -10px rgba(0, 0, 0, 0.6);
 }
 
-.light {
+.light, [data-theme="light"] {
   --bg-canvas: #F7FAF7;
   --bg-surface: #FFFFFF;
   --bg-surface-glass: rgba(255, 255, 255, 0.85);
@@ -44,6 +55,28 @@
   --shadow-glass: 0 8px 24px -8px rgba(18, 50, 28, 0.08);
 }
 
+/* Form controls dark mode compatibility */
+.dark select,
+[data-theme="dark"] select,
+.dark input,
+[data-theme="dark"] input,
+.dark textarea,
+[data-theme="dark"] textarea {
+  color-scheme: dark;
+}
+
+.dark select option,
+[data-theme="dark"] select option {
+  background-color: #0B100D;
+  color: #F8FAFC;
+}
+
+.light select option,
+[data-theme="light"] select option {
+  background-color: #FFFFFF;
+  color: #17251B;
+}
+
 /* Frosted glass utilities */
 .glass-panel {
   backdrop-filter: blur(12px);
@@ -56,28 +89,34 @@
   height: 6px;
 }
 
-.dark ::-webkit-scrollbar-track {
+.dark ::-webkit-scrollbar-track,
+[data-theme="dark"] ::-webkit-scrollbar-track {
   background: #080B09;
 }
 
-.dark ::-webkit-scrollbar-thumb {
+.dark ::-webkit-scrollbar-thumb,
+[data-theme="dark"] ::-webkit-scrollbar-thumb {
   background: rgba(34, 197, 94, 0.2);
   border-radius: 9999px;
 }
 
-.dark ::-webkit-scrollbar-thumb:hover {
+.dark ::-webkit-scrollbar-thumb:hover,
+[data-theme="dark"] ::-webkit-scrollbar-thumb:hover {
   background: rgba(34, 197, 94, 0.4);
 }
 
-.light ::-webkit-scrollbar-track {
+.light ::-webkit-scrollbar-track,
+[data-theme="light"] ::-webkit-scrollbar-track {
   background: #F7FAF7;
 }
 
-.light ::-webkit-scrollbar-thumb {
+.light ::-webkit-scrollbar-thumb,
+[data-theme="light"] ::-webkit-scrollbar-thumb {
   background: #CBDAD0;
   border-radius: 9999px;
 }
 
-.light ::-webkit-scrollbar-thumb:hover {
+.light ::-webkit-scrollbar-thumb:hover,
+[data-theme="light"] ::-webkit-scrollbar-thumb:hover {
   background: #A6BBAE;
 }

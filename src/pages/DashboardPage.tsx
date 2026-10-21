@@ -102,7 +102,7 @@ export const DashboardPage: React.FC<DashboardPageProps> = ({
             <span className="font-mono text-xl sm:text-2xl font-bold text-[#17251B] dark:text-[#F8FAFC]">
               {stats.totalProcessed}
             </span>
-            <span className="text-[10px] text-[#647067] dark:text-[#64746B] block">
+            <span className="text-[10px] text-[#647067] dark:text-[#A1AAA4] block">
               Current Session
             </span>
           </GlassCard>
@@ -114,7 +114,7 @@ export const DashboardPage: React.FC<DashboardPageProps> = ({
             <span className="font-mono text-xl sm:text-2xl font-bold text-emerald-600 dark:text-emerald-400">
               {stats.totalEncrypted}
             </span>
-            <span className="text-[10px] text-[#647067] dark:text-[#64746B] block">
+            <span className="text-[10px] text-[#647067] dark:text-[#A1AAA4] block">
               .svault Containers
             </span>
           </GlassCard>
@@ -126,7 +126,7 @@ export const DashboardPage: React.FC<DashboardPageProps> = ({
             <span className="font-mono text-xl sm:text-2xl font-bold text-emerald-600 dark:text-emerald-400">
               {stats.totalDecrypted}
             </span>
-            <span className="text-[10px] text-[#647067] dark:text-[#64746B] block">
+            <span className="text-[10px] text-[#647067] dark:text-[#A1AAA4] block">
               Restored Byte-for-Byte
             </span>
           </GlassCard>
@@ -138,7 +138,7 @@ export const DashboardPage: React.FC<DashboardPageProps> = ({
             <span className="font-mono text-sm sm:text-base font-bold text-emerald-600 dark:text-emerald-400 flex items-center gap-1 mt-1">
               <CheckCircle2 className="w-4 h-4" /> Ready
             </span>
-            <span className="text-[10px] text-[#647067] dark:text-[#64746B] block">
+            <span className="text-[10px] text-[#647067] dark:text-[#A1AAA4] block">
               AES-256-GCM / PBKDF2
             </span>
           </GlassCard>
