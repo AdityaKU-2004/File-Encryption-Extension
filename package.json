@@ -8,9 +8,12 @@
     "build": "node scripts/build-all.mjs",
     "build:chrome": "vite build --mode chrome",
     "build:firefox": "vite build --mode firefox",
+    "package": "node scripts/package-extensions.mjs",
+    "package:xpi": "node scripts/package-extensions.mjs --firefox",
+    "package:zip": "node scripts/package-extensions.mjs --chrome",
     "preview": "vite preview",
     "typecheck": "tsc --noEmit",
-    "clean": "rm -rf dist chrome-dist firefox-dist server.js",
+    "clean": "rm -rf dist chrome-dist firefox-dist server.js *.xpi *.zip",
     "lint": "tsc --noEmit"
   },
   "dependencies": {
