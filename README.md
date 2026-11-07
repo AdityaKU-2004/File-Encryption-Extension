@@ -393,8 +393,9 @@ Locate the toggle switch labeled **"Developer mode"** in the top-right corner of
 
 1. Click the puzzle-piece icon (Extensions) in your browser toolbar.
 2. Find **SecureVault** and click the **Pin** icon.
-3. Click the SecureVault green shield icon to open the **390px Popup Window**:
-   - Drag and drop a test file (e.g., a `.pdf` or `.png`).
+3. Click the SecureVault green shield icon to open the **Popup Window**:
+   - **Direct Drag & Drop**: Drag and drop any file directly onto the drop zone.
+   - **Persistent Detached Window**: In Chrome and Chromium browsers, opening an OS file picker from a toolbar dropdown popup may cause the browser to automatically dismiss the popup upon losing window focus. SecureVault provides an **"Open in detached window"** button (`ExternalLink` icon in the popup header and inside the drop zone). Clicking this opens a dedicated, persistent window that never closes when selecting files from your computer.
    - Enter a secure password (use the password generator to test generation).
    - Click **"Encrypt File"**.
    - Download the resulting `.svault` file.
@@ -402,13 +403,13 @@ Locate the toggle switch labeled **"Developer mode"** in the top-right corner of
 
 ### Step 6: Test the Full-Page Dashboard
 
-1. In the popup, click the **"Open SecureVault"** button at the top right.
+1. In the popup, click the **"Open SecureVault"** (expand) button at the top right or click the Dashboard link in the footer.
 2. A new browser tab will open displaying `chrome-extension://<extension-id>/dashboard.html`.
 3. Test batch encryption, audit logs, and settings in full-screen view.
 
 ### Step 7: How to Debug / Inspect Console in Chrome
 
-- **Debugging Popup**: Right-click anywhere inside the SecureVault popup window and choose **"Inspect"**. This opens Chrome DevTools scoped to `popup.html`.
+- **Debugging Popup**: Right-click anywhere inside the SecureVault popup window and choose **"Inspect"**. This opens Chrome DevTools scoped to `popup.html` (note that keeping DevTools open also pins the popup and prevents it from auto-closing).
 - **Debugging Dashboard**: Press `F12` or `Ctrl+Shift+I` (Mac: `Cmd+Option+I`) while on `dashboard.html`.
 - **Reloading Code Changes**: When you recompile (`npm run build:chrome`), return to `chrome://extensions` and click the **Refresh (↻)** icon on the SecureVault card.
 

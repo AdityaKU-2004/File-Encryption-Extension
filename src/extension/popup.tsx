@@ -18,8 +18,15 @@ const ExtensionPopupApp: React.FC = () => {
   const { toasts, showToast, dismissToast } = useToast();
   const { addEntry } = useHistory();
 
+  // Detect if opened as standalone window (or tab)
+  const isWindowMode =
+    typeof window !== 'undefined' &&
+    (window.location.search.includes('mode=window') ||
+      window.location.search.includes('mode=tab') ||
+      window.innerWidth > 400);
+
   return (
-    <div className="w-[390px] min-h-[520px] bg-[#F7FAF7] dark:bg-[#080B09] text-[#17251B] dark:text-[#F8FAFC]">
+    <div className={`min-h-[520px] ${isWindowMode ? 'w-full max-w-[440px] mx-auto' : 'w-[390px]'} bg-[#F7FAF7] dark:bg-[#080B09] text-[#17251B] dark:text-[#F8FAFC]`}>
       <PopupLayout
         theme={theme}
         onToggleTheme={toggleTheme}

@@ -92,6 +92,83 @@ export async function openDashboardTab(): Promise<void> {
 }
 
 /**
+ * Opens popup.html in a persistent standalone popup window (type: "popup").
+ * Standalone windows do NOT close when the OS native file dialog opens.
+ */
+export async function openPopupWindow(): Promise<void> {
+  const targetUrl = getExtensionUrl('popup.html?mode=window');
+
+  // Try Chrome windows API
+  try {
+    if (typeof chrome !== 'undefined' && chrome?.windows?.create) {
+      await chrome.windows.create({
+        url: targetUrl,
+        type: 'popup',
+        width: 440,
+        height: 640,
+        focused: true,
+      });
+      return;
+    }
+  } catch (err) {
+    console.debug('Chrome windows API unavailable, using fallback', err);
+  }
+
+  // Try Firefox WebExtensions windows API
+  try {
+    if (typeof browser !== 'undefined' && browser?.windows?.create) {
+      await browser.windows.create({
+        url: targetUrl,
+        type: 'popup',
+        width: 440,
+        height: 640,
+      });
+      return;
+    }
+  } catch (err) {
+    console.debug('Firefox browser windows API unavailable, using fallback', err);
+  }
+
+  // Fallback to window.open with dimensions
+  try {
+    window.open(targetUrl, 'SecureVault', 'width=440,height=640,menubar=no,toolbar=no,location=no');
+  } catch (err) {
+    console.error('Failed to open standalone popup window:', err);
+  }
+}
+
+/**
+ * Opens popup.html in a new browser tab.
+ */
+export async function openPopupTab(): Promise<void> {
+  const targetUrl = getExtensionUrl('popup.html?mode=tab');
+
+  try {
+    if (typeof chrome !== 'undefined' && chrome?.tabs?.create) {
+      chrome.tabs.create({ url: targetUrl });
+      return;
+    }
+  } catch (err) {
+    console.debug('Chrome tabs API unavailable, using fallback', err);
+  }
+
+  try {
+    if (typeof browser !== 'undefined' && browser?.tabs?.create) {
+      await browser.tabs.create({ url: targetUrl });
+      return;
+    }
+  } catch (err) {
+    console.debug('Firefox tabs API unavailable, using fallback', err);
+  }
+
+  try {
+    window.open(targetUrl, '_blank', 'noopener,noreferrer');
+  } catch (err) {
+    console.error('Failed to open popup tab:', err);
+  }
+}
+
+/**
  * Returns extension version string from manifest or default '1.0.0'.
  */
 export function getExtensionVersion(): string {

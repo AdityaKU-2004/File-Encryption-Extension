@@ -17,6 +17,7 @@ import {
   FileUp,
   Clock,
   CheckCircle2,
+  ExternalLink,
 } from 'lucide-react';
 import { APP_NAME, APP_VERSION, FILE_EXTENSION } from '../../config/encryptionConfig';
 import { useFileSelection } from '../../hooks/useFileSelection';
@@ -35,6 +36,7 @@ import { FileProgress } from '../files/FileProgress';
 import { PasswordGenerator } from '../password/PasswordGenerator';
 import { PasswordInput } from '../password/PasswordInput';
 import { PasswordStrength } from '../password/PasswordStrength';
+import { openPopupWindow } from '../../extension/browser';
 
 export interface PopupLayoutProps {
   theme: ThemeMode;
@@ -70,6 +72,10 @@ export const PopupLayout: React.FC<PopupLayoutProps> = ({
   const [isDecrypting, setIsDecrypting] = useState(false);
   const [decryptError, setDecryptError] = useState<string | null>(null);
   const decryptFileRef = useRef<HTMLInputElement>(null);
+
+  // Drag-and-drop hover states (drag-and-drop keeps popup open natively)
+  const [isEncryptDragging, setIsEncryptDragging] = useState(false);
+  const [isDecryptDragging, setIsDecryptDragging] = useState(false);
 
   const encryptStrength = calculatePasswordStrength(encryptPassword);
 
@@ -251,6 +257,15 @@ export const PopupLayout: React.FC<PopupLayoutProps> = ({
 
           <div className="flex items-center gap-1">
             <IconButton
+              aria-label="Open in standalone window"
+              title="Open in persistent window (prevents popup from closing when browsing files)"
+              size="sm"
+              onClick={openPopupWindow}
+            >
+              <ExternalLink className="w-3.5 h-3.5 text-emerald-600 dark:text-emerald-400" />
+            </IconButton>
+
+            <IconButton
               aria-label="Toggle theme"
               title="Toggle theme"
               size="sm"
@@ -344,16 +359,52 @@ export const PopupLayout: React.FC<PopupLayoutProps> = ({
               {/* File selector or current file card */}
               {encryptSelection.selectedFiles.length === 0 ? (
                 <div
+                  onDragOver={(e) => {
+                    e.preventDefault();
+                    e.stopPropagation();
+                    setIsEncryptDragging(true);
+                  }}
+                  onDragLeave={(e) => {
+                    e.preventDefault();
+                    e.stopPropagation();
+                    setIsEncryptDragging(false);
+                  }}
+                  onDrop={(e) => {
+                    e.preventDefault();
+                    e.stopPropagation();
+                    setIsEncryptDragging(false);
+                    if (e.dataTransfer.files && e.dataTransfer.files.length > 0) {
+                      encryptSelection.addFiles(e.dataTransfer.files);
+                    }
+                  }}
                   onClick={() => encryptFileRef.current?.click()}
-                  className="p-4 rounded-xl border border-dashed border-[#DCE8DE] dark:border-emerald-500/20 bg-neutral-50/50 dark:bg-[#0B100D] text-center cursor-pointer hover:border-emerald-500/40 transition-colors"
+                  className={`p-4 rounded-xl border border-dashed transition-all cursor-pointer text-center ${
+                    isEncryptDragging
+                      ? 'border-emerald-500 bg-emerald-50/70 dark:bg-emerald-950/40 scale-[1.01]'
+                      : 'border-[#DCE8DE] dark:border-emerald-500/20 bg-neutral-50/50 dark:bg-[#0B100D] hover:border-emerald-500/40'
+                  }`}
                 >
                   <FileUp className="w-6 h-6 text-emerald-500 mx-auto mb-1.5" />
-                  <p className="text-xs font-medium text-[#17251B] dark:text-[#F8FAFC]">
-                    Choose files to encrypt
+                  <p className="text-xs font-semibold text-[#17251B] dark:text-[#F8FAFC]">
+                    {isEncryptDragging ? 'Drop files to add' : 'Drop files here or click to browse'}
                   </p>
                   <p className="text-[10px] text-[#647067] dark:text-[#A1AAA4] mt-0.5">
-                    Videos, documents, spreadsheets, images, archives
+                    Drag files directly or click browse
                   </p>
+                  <div className="mt-2 pt-2 border-t border-[#DCE8DE]/60 dark:border-emerald-500/10 flex items-center justify-center gap-1">
+                    <button
+                      type="button"
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        openPopupWindow();
+                      }}
+                      className="text-[10px] text-emerald-600 dark:text-emerald-400 hover:underline flex items-center gap-1 cursor-pointer"
+                      title="Open in persistent window if your browser auto-closes popup on browse"
+                    >
+                      <ExternalLink className="w-2.5 h-2.5" />
+                      <span>Open in detached window</span>
+                    </button>
+                  </div>
                 </div>
               ) : (
                 <div className="space-y-2">
@@ -470,16 +521,52 @@ export const PopupLayout: React.FC<PopupLayoutProps> = ({
               {/* File selector or current file card */}
               {decryptSelection.selectedFiles.length === 0 ? (
                 <div
+                  onDragOver={(e) => {
+                    e.preventDefault();
+                    e.stopPropagation();
+                    setIsDecryptDragging(true);
+                  }}
+                  onDragLeave={(e) => {
+                    e.preventDefault();
+                    e.stopPropagation();
+                    setIsDecryptDragging(false);
+                  }}
+                  onDrop={(e) => {
+                    e.preventDefault();
+                    e.stopPropagation();
+                    setIsDecryptDragging(false);
+                    if (e.dataTransfer.files && e.dataTransfer.files.length > 0) {
+                      decryptSelection.addFiles(e.dataTransfer.files);
+                    }
+                  }}
                   onClick={() => decryptFileRef.current?.click()}
-                  className="p-4 rounded-xl border border-dashed border-[#DCE8DE] dark:border-emerald-500/20 bg-neutral-50/50 dark:bg-[#0B100D] text-center cursor-pointer hover:border-emerald-500/40 transition-colors"
+                  className={`p-4 rounded-xl border border-dashed transition-all cursor-pointer text-center ${
+                    isDecryptDragging
+                      ? 'border-emerald-500 bg-emerald-50/70 dark:bg-emerald-950/40 scale-[1.01]'
+                      : 'border-[#DCE8DE] dark:border-emerald-500/20 bg-neutral-50/50 dark:bg-[#0B100D] hover:border-emerald-500/40'
+                  }`}
                 >
                   <Unlock className="w-6 h-6 text-emerald-500 mx-auto mb-1.5" />
-                  <p className="text-xs font-medium text-[#17251B] dark:text-[#F8FAFC]">
-                    Choose .svault files
+                  <p className="text-xs font-semibold text-[#17251B] dark:text-[#F8FAFC]">
+                    {isDecryptDragging ? 'Drop .svault files' : 'Drop .svault files here or click to browse'}
                   </p>
                   <p className="text-[10px] text-[#647067] dark:text-[#A1AAA4] mt-0.5">
-                    Select encrypted SecureVault containers
+                    Drag encrypted files directly or click browse
                   </p>
+                  <div className="mt-2 pt-2 border-t border-[#DCE8DE]/60 dark:border-emerald-500/10 flex items-center justify-center gap-1">
+                    <button
+                      type="button"
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        openPopupWindow();
+                      }}
+                      className="text-[10px] text-emerald-600 dark:text-emerald-400 hover:underline flex items-center gap-1 cursor-pointer"
+                      title="Open in persistent window if your browser auto-closes popup on browse"
+                    >
+                      <ExternalLink className="w-2.5 h-2.5" />
+                      <span>Open in detached window</span>
+                    </button>
+                  </div>
                 </div>
               ) : (
                 <div className="space-y-2">
